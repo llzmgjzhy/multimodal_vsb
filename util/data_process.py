@@ -278,6 +278,7 @@ if __name__ == "__main__":
         all_flat_signals,
         all_points,
     )
+    del all_flat_signals, all_points, signal_df
     print(waveforms.shape)
     pickle.dump(
         waveforms,
