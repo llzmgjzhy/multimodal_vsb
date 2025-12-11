@@ -18,7 +18,7 @@ class Options(object):
                 "classification",
                 "forecast",
             },
-            default="fault_detection",
+            default="classification",
             help=(
                 "Training objective/task: fault detection of entire time series\n"
                 "classification of entire time series,\n"
@@ -27,7 +27,7 @@ class Options(object):
         )
         self.parser.add_argument(
             "--output_dir",
-            default="./experiments",
+            default="./tensorboard",
             help="Root output directory. Must exist. Time-stamped directories will be created inside.",
         )
         self.parser.add_argument(
@@ -46,12 +46,6 @@ class Options(object):
             type=str,
             default="",
             help="A comment/description of the experiment",
-        )
-        self.parser.add_argument(
-            "--details",
-            type=str,
-            default="",
-            help="A string with details of the experiment",
         )
 
         # data loader
@@ -80,12 +74,6 @@ class Options(object):
         )
         self.parser.add_argument(
             "--label_len", type=int, default=48, help="start token length"
-        )
-        self.parser.add_argument(
-            "--pred_len", type=int, default=512, help="prediction sequence length"
-        )
-        self.parser.add_argument(
-            "--seasonal_patterns", type=str, default="Monthly", help="subset for M4"
         )
 
         # System
@@ -131,7 +119,7 @@ class Options(object):
         self.parser.add_argument(
             "--epochs", type=int, default=100, help="Number of training epochs"
         )
-        self.parser.add_argument("--itr", type=int, default=3)
+        self.parser.add_argument("--itr", type=int, default=5)
         self.parser.add_argument(
             "--val_interval",
             type=int,
@@ -150,7 +138,7 @@ class Options(object):
         self.parser.add_argument(
             "--lr",
             type=float,
-            default=1e-3,
+            default=1e-5,
             help="learning rate (default holds for batch size 64)",
         )
         self.parser.add_argument(

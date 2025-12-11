@@ -12,7 +12,6 @@ task=fault_detection
 python main_patchtst.py \
     --task $task \
     --comment "$task using $model" \
-    --details "fault detection instead of classification." \
     --name "${task}_vsb" \
     --root_path ./dataset \
     --meta_path vsb-power-line-fault-detection \
