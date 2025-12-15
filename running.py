@@ -287,7 +287,7 @@ class ClassificationRunner(BaseRunner):
 
                 X, targets = batch
                 X = X.float().to(device=self.device)
-                targets = targets.float().to(device=self.device)
+                targets = targets.long().to(device=self.device)
                 outputs = self.model(X)
 
                 loss = self.loss_module(outputs, targets)
@@ -338,7 +338,7 @@ class ClassificationRunner(BaseRunner):
 
                 X, targets = batch
                 X = X.float().to(device=self.device)
-                targets = targets.float().to(device=self.device)
+                targets = targets.long().to(device=self.device)
                 outputs = self.model(X)
 
                 loss = self.loss_module(outputs, targets)
@@ -446,7 +446,8 @@ def validate(
         best_metrics = aggr_metrics.copy()
 
         # save per-batch predictions
-        pred = np.concatenate(per_batch["outputs"], axis=0)
+        logits = np.concatenate(per_batch["outputs"], axis=0)  # [N, 2]
+        pred = np.argmax(logits, axis=1)
         test_labels = np.concatenate(per_batch["targets"], axis=0).reshape(-1)
         df = pd.DataFrame(
             {
@@ -495,7 +496,8 @@ def test(test_evaluator, config, fold_i=0):
     logger.info(print_str)
 
     # save per-batch predictions
-    pred = np.concatenate(per_batch["outputs"], axis=0)
+    logits = np.concatenate(per_batch["outputs"], axis=0)  # [N, 2]
+    pred = np.argmax(logits, axis=1)  # [N]
     test_labels = np.concatenate(per_batch["targets"], axis=0).reshape(-1)
     df = pd.DataFrame(
         {

@@ -56,24 +56,18 @@ class Options(object):
             help="root path of the data file",
         )
         self.parser.add_argument(
-            "--meta_path",
-            type=str,
-            default="vsb-power-line-fault-detection",
-            help="data file",
-        )
-        self.parser.add_argument(
             "--data_path",
             type=str,
-            default="three-phase-denoise-features",
+            default="VSBdata",
             help="data file",
         )
 
         # task
         self.parser.add_argument(
-            "--seq_len", type=int, default=800000, help="input sequence length"
+            "--pulse_num", type=int, default=160, help="input sequence length"
         )
         self.parser.add_argument(
-            "--label_len", type=int, default=48, help="start token length"
+            "--pulse_len", type=int, default=48, help="start token length"
         )
 
         # System
@@ -179,21 +173,21 @@ class Options(object):
 
         # Model
         self.parser.add_argument(
-            "--patch_size", type=int, default=1000, help="patch_size"
+            "--patch_size", type=int, default=30, help="patch_size"
         )
-        self.parser.add_argument("--stride", type=int, default=1000, help="stride")
+        self.parser.add_argument("--stride", type=int, default=30, help="stride")
         self.parser.add_argument(
             "--window_num", type=int, default=16, help="number of window in stage1"
         )
         self.parser.add_argument(
             "--model_name",
-            default="patchtst",
+            default="one_fits_all",
             help="Model class",
         )
         self.parser.add_argument(
             "--d_model",
             type=int,
-            default=128,
+            default=768,
             help="Internal dimension of transformer embeddings",
         )
         self.parser.add_argument(

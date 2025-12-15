@@ -1,1 +1,7 @@
 *.json
+
+/dataset/VSBdata
+
+/tensorboard
+
+*__pycache__
