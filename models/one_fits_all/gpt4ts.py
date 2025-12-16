@@ -15,7 +15,7 @@ class gpt4ts(nn.Module):
     def __init__(self, config):
         super(gpt4ts, self).__init__()
         self.gpt_layers = 6
-        self.num_classes = 2
+        self.num_classes = 1
         self.d_model = config.d_model
 
         self.patch_num = config.pulse_num
@@ -59,4 +59,4 @@ class gpt4ts(nn.Module):
         outputs = self.ln_proj(outputs)
         outputs = self.out_layer(outputs)
 
-        return outputs
+        return outputs.squeeze(-1)

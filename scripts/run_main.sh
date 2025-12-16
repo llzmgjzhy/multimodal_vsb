@@ -15,13 +15,13 @@ python run_main.py \
     --records_file vsb_$task.xlsx \
     --model_name $model \
     --epochs $epochs \
-    --loss cross_entropy \
-    --key_metric loss \
+    --loss focal \
+    --key_metric mcc \
     --seed 2025 \
     --batch_size $batch_size \
     --lr $lr \
     --itr $itr \
     --d_model 768 \
-    --dropout 0.21 \
-    --patience 100 \
+    --dropout 0.1 \
+    --patience 20 \
     # --weight_decay 1e-3 \

@@ -5,3 +5,5 @@
 /tensorboard
 
 *__pycache__
+
+*.xlsx
