@@ -67,7 +67,7 @@ class Options(object):
             "--pulse_num", type=int, default=160, help="input sequence length"
         )
         self.parser.add_argument(
-            "--pulse_len", type=int, default=48, help="start token length"
+            "--pulse_len", type=int, default=30, help="start token length"
         )
 
         # System
