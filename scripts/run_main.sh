@@ -3,7 +3,7 @@ batch_size=32
 epochs=100
 lr=1e-4
 itr=1
-task=classification
+task=fault_detection
 
 python run_main.py \
     --task $task \
