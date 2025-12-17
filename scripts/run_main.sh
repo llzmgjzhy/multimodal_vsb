@@ -1,4 +1,4 @@
-model=one_fits_all
+model=linear
 batch_size=32
 epochs=100
 lr=1e-4

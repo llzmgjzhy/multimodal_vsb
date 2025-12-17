@@ -11,7 +11,7 @@ class Linear_Model(nn.Module):
         self.pulse_num = config.pulse_num
 
         self.ln_proj = nn.LayerNorm(self.pulse_len * self.pulse_num)
-        self.out_layer = nn.Linear(self.pulse_len * self.pulse_num)
+        self.out_layer = nn.Linear(self.pulse_len * self.pulse_num, self.num_classes)
 
     def forward(self, x_enc):
         B, L, M = x_enc.shape
