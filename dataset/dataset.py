@@ -26,9 +26,18 @@ class VSBTrainDataset(Dataset):
         #     os.path.join(self.img_path, f"signals_{self.signal_ids[index]}.npy")
         # ).astype(np.float32)
         # signal = np.transpose(signal, (1, 0))  # [800000, 3]
-        signal = self.data[
-            self.signal_ids[index]
-        ]  # signal shape is [160, 30], astype float32
+
+        start_idx = index * 3
+        end_idx = start_idx + 3
+        if end_idx > len(self.data):
+            raise IndexError(
+                f"Index {index} out of range: start_idx={start_idx} exceeds data length {len(self.data)}"
+            )
+
+        signal = self.data[start_idx:end_idx]  # 形状：[3, 160, 30]
+        # signal = self.data[
+        #     self.signal_ids[index]
+        # ]  # signal shape is [160, 30], astype float32
 
         label = self.labels[index]
         return (signal, label)

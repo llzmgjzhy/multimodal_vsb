@@ -30,7 +30,7 @@ class PulseConvEncoder(nn.Module):
     def __init__(self, c_in, d_model):
         super(PulseConvEncoder, self).__init__()
         self.conv = nn.Sequential(
-            nn.Conv1d(1, 32, kernel_size=3, padding=1),
+            nn.Conv1d(3, 32, kernel_size=3, padding=1),
             nn.BatchNorm1d(32),
             nn.ReLU(inplace=True),
             nn.Conv1d(32, 64, kernel_size=3, padding=1),
@@ -54,10 +54,11 @@ class PulseConvEncoder(nn.Module):
                 )
 
     def forward(self, x):
-        B, N, L = x.shape
+        B, C, N, L = x.shape
         assert L > 0, "Pulse length must be positive"
 
-        x = x.reshape(B * N, 1, L)
+        # x = x.reshape(B * N, 1, L)
+        x = x.permute(0, 2, 1, 3).reshape(B * N, C, L)  # [B*N, 3, L]
 
         x = self.conv(x)  # [B*N, 128, 1]
         x = x.squeeze(-1)  # [B*N, 128]
@@ -162,8 +163,8 @@ class DataEmbedding(nn.Module):
     def __init__(self, c_in, d_model, embed_type="fixed", freq="h", dropout=0.1):
         super(DataEmbedding, self).__init__()
 
-        self.value_embedding = TokenEmbedding(c_in=c_in, d_model=d_model)
-        # self.value_embedding = PulseConvEncoder(c_in=c_in, d_model=d_model)
+        # self.value_embedding = TokenEmbedding(c_in=c_in, d_model=d_model)
+        self.value_embedding = PulseConvEncoder(c_in=c_in, d_model=d_model)
         self.position_embedding = PositionalEmbedding(d_model=d_model)
         self.temporal_embedding = (
             TemporalEmbedding(d_model=d_model, embed_type=embed_type, freq=freq)
@@ -174,7 +175,8 @@ class DataEmbedding(nn.Module):
 
     def forward(self, x, x_mark):
         if x_mark is None:
-            x = self.value_embedding(x) + self.position_embedding(x)
+            # x = self.value_embedding(x) + self.position_embedding(x)
+            x = self.value_embedding(x)
         else:
             x = (
                 self.value_embedding(x)

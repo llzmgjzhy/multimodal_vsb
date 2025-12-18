@@ -46,8 +46,8 @@ def main(config):
     # Build data indices
     config.data_path = os.path.join(config.root_path, config.data_path)
     meta_data_train = pd.read_csv(os.path.join(config.data_path, "metadata_train.csv"))
-    positive_ids = set(meta_data_train.loc[meta_data_train["target"] == 1, "signal_id"])
-    signals_ids = meta_data_train["signal_id"].unique()
+    positive_ids = set(meta_data_train.loc[meta_data_train["target"] == 1, "id_measurement"])
+    signals_ids = meta_data_train["id_measurement"].unique()
     labels = np.array([int(id in positive_ids) for id in signals_ids], dtype=np.int64)
 
     # train : val : test , 3:1:1

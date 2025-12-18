@@ -20,7 +20,7 @@ class Linear_Model(nn.Module):
         self.out_layer = nn.Linear(config.pulse_num * config.d_model, self.num_classes)
 
     def forward(self, x_enc):
-        B, L, M = x_enc.shape
+        B, C, L, M = x_enc.shape
         outputs = self.enc_embedding(x_enc, None)
         outputs = outputs.reshape(B, -1)
         outputs = self.ln_proj(outputs)
