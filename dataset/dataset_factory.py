@@ -4,7 +4,9 @@ import numpy as np
 
 
 def _create_loader(dataset_class, indices, signals_ids, labels, config, is_train=True):
-    dataset = dataset_class(signals_ids[indices], labels[indices], config.data_path)
+    dataset = dataset_class(
+        signals_ids[indices], labels[indices], config.data_path, config.phase_level
+    )
     is_shuffle = is_train
     return DataLoader(
         dataset,
@@ -17,7 +19,9 @@ def _create_loader(dataset_class, indices, signals_ids, labels, config, is_train
 
 
 def dataloader_provider(config, train_idx, val_idx, test_idx, signals_ids, labels):
-    train_loader = _create_loader(VSBTrainDataset, train_idx, signals_ids, labels, config)
+    train_loader = _create_loader(
+        VSBTrainDataset, train_idx, signals_ids, labels, config
+    )
     val_loader = _create_loader(
         VSBTrainDataset, val_idx, signals_ids, labels, config, is_train=False
     )

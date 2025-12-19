@@ -69,6 +69,11 @@ class Options(object):
         self.parser.add_argument(
             "--pulse_len", type=int, default=30, help="start token length"
         )
+        self.parser.add_argument(
+            "--phase_level",
+            action="store_true",
+            help="If set, phase-level classification is performed; otherwise, sample-level classification is performed",
+        )
 
         # System
         self.parser.add_argument(
