@@ -1,4 +1,4 @@
-model=linear
+model=mlp
 batch_size=32
 epochs=100
 lr=1e-4
@@ -24,4 +24,5 @@ python run_main.py \
     --d_model 768 \
     --dropout 0.1 \
     --patience 20 \
+    --phase_level \
     # --weight_decay 1e-3 \
