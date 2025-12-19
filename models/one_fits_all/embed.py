@@ -26,6 +26,22 @@ class PositionalEmbedding(nn.Module):
         return self.pe[:, : x.size(1)]
 
 
+class PulseMLPEncoder(nn.Module):
+    def __init__(self, c_in, d_model):
+        super(PulseMLPEncoder, self).__init__()
+        self.mlp = nn.Sequential(
+            nn.Linear(c_in, d_model),
+            nn.GELU(),
+            nn.Linear(d_model, d_model),
+        )
+        self.norm = nn.LayerNorm(d_model)
+
+    def forward(self, x):
+        x = self.mlp(x)
+        x = self.norm(x)
+        return x
+
+
 class PulseConvEncoder(nn.Module):
     def __init__(self, c_in, d_model):
         super(PulseConvEncoder, self).__init__()
@@ -164,7 +180,8 @@ class DataEmbedding(nn.Module):
         super(DataEmbedding, self).__init__()
 
         # self.value_embedding = TokenEmbedding(c_in=c_in, d_model=d_model)
-        self.value_embedding = PulseConvEncoder(c_in=c_in, d_model=d_model)
+        # self.value_embedding = PulseConvEncoder(c_in=c_in, d_model=d_model)
+        self.value_embedding = PulseMLPEncoder(c_in=c_in, d_model=d_model)
         self.position_embedding = PositionalEmbedding(d_model=d_model)
         self.temporal_embedding = (
             TemporalEmbedding(d_model=d_model, embed_type=embed_type, freq=freq)
@@ -175,8 +192,7 @@ class DataEmbedding(nn.Module):
 
     def forward(self, x, x_mark):
         if x_mark is None:
-            # x = self.value_embedding(x) + self.position_embedding(x)
-            x = self.value_embedding(x)
+            x = self.value_embedding(x) + self.position_embedding(x)
         else:
             x = (
                 self.value_embedding(x)

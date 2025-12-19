@@ -44,7 +44,6 @@ class gpt4ts(nn.Module):
 
         self.ln_proj = nn.LayerNorm(config.d_model * self.patch_num)
 
-        self.ln_proj = nn.LayerNorm(config.d_model * self.patch_num)
         self.out_layer = nn.Linear(config.d_model * self.patch_num, self.num_classes)
 
     def forward(self, x_enc):
