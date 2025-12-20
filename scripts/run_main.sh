@@ -3,7 +3,7 @@ batch_size=32
 epochs=100
 lr=1e-4
 itr=1
-task=fault_detection
+task=classification
 
 python run_main.py \
     --task $task \
@@ -15,8 +15,8 @@ python run_main.py \
     --records_file vsb_$task.xlsx \
     --model_name $model \
     --epochs $epochs \
-    --loss focal \
-    --key_metric mcc \
+    --loss cross_entropy \
+    --key_metric loss \
     --seed 2025 \
     --batch_size $batch_size \
     --lr $lr \
