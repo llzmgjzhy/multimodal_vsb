@@ -25,6 +25,12 @@ class gpt4ts(nn.Module):
             config.d_model,
             dropout=config.dropout,
         )
+        self.mlp = nn.Sequential(
+            nn.Linear(config.pulse_len, 64),
+            nn.GELU(),
+            nn.Linear(64, config.d_model),
+            nn.LayerNorm(config.d_model),
+        )
 
         self.gpt2 = GPT2Model.from_pretrained(
             "gpt2", output_attentions=True, output_hidden_states=True
@@ -49,7 +55,7 @@ class gpt4ts(nn.Module):
     def forward(self, x_enc):
         B, L, M = x_enc.shape
 
-        outputs = self.enc_embedding(x_enc, None)
+        outputs = self.mlp(x_enc)
         # outputs shape: (B, L, d_model)
 
         outputs = self.gpt2(inputs_embeds=outputs).last_hidden_state
