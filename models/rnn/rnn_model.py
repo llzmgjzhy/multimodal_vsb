@@ -7,7 +7,7 @@ class RNN_Model(nn.Module):
 
     def __init__(self, config):
         super(RNN_Model, self).__init__()
-        self.num_classes = 1
+        self.num_classes = 2 if config.task == "classification" else 1
         self.pulse_len = config.pulse_len
         self.pulse_num = config.pulse_num
 

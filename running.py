@@ -448,11 +448,14 @@ def validate(
         logits = torch.from_numpy(
             np.concatenate(per_batch["outputs"], axis=0)
         )  # [N, 2]
+        test_labels = np.concatenate(per_batch["targets"], axis=0).reshape(-1)
         if config.task == "fault_detection":
-            pred = (torch.sigmoid(logits) > 0.5).cpu().numpy().astype(int)
+            best_threshold, _, _ = eval_mcc(test_labels, logits)
+            pred = (logits > best_threshold).cpu().numpy()
+
         elif config.task == "classification":
             pred = np.argmax(logits, axis=1)  # [N]
-        test_labels = np.concatenate(per_batch["targets"], axis=0).reshape(-1)
+
         df = pd.DataFrame(
             {
                 "pred": pred,
@@ -501,11 +504,13 @@ def test(test_evaluator, config, fold_i=0):
 
     # save per-batch predictions
     logits = torch.from_numpy(np.concatenate(per_batch["outputs"], axis=0))  # [N, 2]
+    test_labels = np.concatenate(per_batch["targets"], axis=0).reshape(-1)
     if config.task == "fault_detection":
-        pred = (torch.sigmoid(logits) > 0.5).cpu().numpy().astype(int)
+        best_threshold, _, _ = eval_mcc(test_labels, logits)
+        pred = (logits > best_threshold).cpu().numpy()
     elif config.task == "classification":
         pred = np.argmax(logits, axis=1)  # [N]
-    test_labels = np.concatenate(per_batch["targets"], axis=0).reshape(-1)
+
     df = pd.DataFrame(
         {
             "pred": pred,
