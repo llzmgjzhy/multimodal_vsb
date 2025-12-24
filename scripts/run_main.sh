@@ -1,4 +1,4 @@
-model=one_fits_all
+model=rnn
 batch_size=32
 epochs=50
 lr=1e-4
@@ -15,13 +15,13 @@ python run_main.py \
     --records_file vsb_$task.xlsx \
     --model_name $model \
     --epochs $epochs \
-    --loss cross_entropy \
+    --loss bce \
     --key_metric loss \
     --seed 2025 \
     --batch_size $batch_size \
     --lr $lr \
     --itr $itr \
-    --d_model 768 \
+    --d_model 64 \
     --dropout 0.1 \
     --patience 20 \
     --phase_level \
