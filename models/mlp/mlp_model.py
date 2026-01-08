@@ -16,15 +16,17 @@ class MLP_Model(nn.Module):
             nn.GELU(),
             nn.Linear(config.d_model, config.d_model),
             nn.LayerNorm(config.d_model),
+            nn.Linear(config.d_model, self.num_classes),
         )
 
         self.out_layer = nn.Linear(config.pulse_num * config.d_model, self.num_classes)
 
     def forward(self, x_enc):
-        B, L, M = x_enc.shape
-        outputs = self.net(x_enc)
-        outputs = outputs.reshape(B, -1)
-
-        outputs = self.out_layer(outputs)
+        B, L, M = x_enc.shape  # [b, 160, 30]
+        outputs = self.net(x_enc)  # [b, 160, 1]
+        # mean pooling over the pulse_num dimension
+        outputs = outputs.reshape(B, self.pulse_num).mean(
+            dim=1, keepdim=False
+        )  # [b, 1]
 
         return outputs.squeeze(-1)
