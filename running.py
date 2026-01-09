@@ -449,16 +449,10 @@ def validate(
             np.concatenate(per_batch["outputs"], axis=0)
         )  # [N, 2]
         test_labels = np.concatenate(per_batch["targets"], axis=0).reshape(-1)
-        if config.task == "fault_detection":
-            best_threshold, _, _ = eval_mcc(test_labels, logits)
-            pred = (logits > best_threshold).cpu().numpy()
-
-        elif config.task == "classification":
-            pred = np.argmax(logits, axis=1)  # [N]
 
         df = pd.DataFrame(
             {
-                "pred": pred,
+                "pred": logits,
                 "targets": test_labels,
             }
         )
@@ -467,10 +461,21 @@ def validate(
     return aggr_metrics, best_metrics, best_value
 
 
-def test(test_evaluator, config, fold_i=0):
+def test(test_evaluator, val_evaluator, config, fold_i=0):
     """Run an evaluation on the validation set while logging metrics, and handle outcome"""
 
     logger.info("Testing on test set ...")
+    with torch.no_grad():
+        val_aggr_metrics, val_per_batch = val_evaluator.evaluate(keep_all=True)
+        del val_aggr_metrics
+    # get best threshold from validation set
+    val_logits = torch.from_numpy(
+        np.concatenate(val_per_batch["outputs"], axis=0)
+    )  # [N, 2]
+    val_labels = np.concatenate(val_per_batch["targets"], axis=0).reshape(-1)
+    best_threshold, _, _ = eval_mcc(val_labels, val_logits)
+    logger.info(f"Fold {fold_i} best test threshold: {best_threshold}")
+
     eval_start_time = time.time()
     with torch.no_grad():
         aggr_metrics, per_batch = test_evaluator.evaluate(keep_all=True)
@@ -505,15 +510,10 @@ def test(test_evaluator, config, fold_i=0):
     # save per-batch predictions
     logits = torch.from_numpy(np.concatenate(per_batch["outputs"], axis=0))  # [N, 2]
     test_labels = np.concatenate(per_batch["targets"], axis=0).reshape(-1)
-    if config.task == "fault_detection":
-        best_threshold, _, _ = eval_mcc(test_labels, logits)
-        pred = (logits > best_threshold).cpu().numpy()
-    elif config.task == "classification":
-        pred = np.argmax(logits, axis=1)  # [N]
 
     df = pd.DataFrame(
         {
-            "pred": pred,
+            "pred": logits,
             "targets": test_labels,
         }
     )

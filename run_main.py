@@ -197,6 +197,7 @@ def main(config):
         )
         aggr_metrics_test = test(
             test_evaluator,
+            val_evaluator,
             config,
             fold_i=fold_i,
         )
