@@ -1,4 +1,4 @@
-model=mlp
+model=1dcnn
 batch_size=32
 epochs=50
 lr=1e-4
