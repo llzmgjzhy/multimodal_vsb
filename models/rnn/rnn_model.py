@@ -20,19 +20,14 @@ class RNN_Model(nn.Module):
 
         self.rnn = nn.LSTM(
             input_size=config.d_model,
-            hidden_size=config.d_model,
+            hidden_size=config.d_model * 2,
             num_layers=1,
             batch_first=True,
             dropout=config.dropout,
             bidirectional=True,
         )
 
-        self.classifier = nn.Sequential(
-            nn.Linear(2 * config.d_model, 2 * config.d_model),
-            nn.GELU(),
-            nn.Dropout(config.dropout),
-            nn.Linear(2 * config.d_model, self.num_classes),
-        )
+        self.head = nn.Linear(config.d_model * 2, self.num_classes)
 
     def forward(self, x_enc):
         B, L, M = x_enc.shape
@@ -40,11 +35,8 @@ class RNN_Model(nn.Module):
 
         outputs, (h_n, c_n) = self.rnn(x_enc)
 
-        h_forward = h_n[-2]  # [B, d_model]
-        h_backward = h_n[-1]  # [B, d_model]
+        h_last = h_n[-1]  # [B, hid_dim]
 
-        outputs = torch.cat((h_forward, h_backward), dim=1)  # [B, 2*d_model]
-
-        outputs = self.classifier(outputs)
+        outputs = self.head(h_last)
 
         return outputs.squeeze(-1)
