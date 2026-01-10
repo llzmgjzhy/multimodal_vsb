@@ -5,6 +5,7 @@ from .rnn.rnn_model import RNN_Model
 from .SingleCNN.cnn import SinglePulseCNN
 from .gru.gru_model import PulseGRUModel
 from .mlp_cnn.mlp_cnn import PulseConvModel
+from .transformer.transformer_model import PulseTransformerModel
 
 model_factory = {
     "one_fits_all": gpt4ts,
@@ -14,5 +15,6 @@ model_factory = {
     "1dcnn": SinglePulseCNN,
     "gru": PulseGRUModel,
     "mlp_cnn": PulseConvModel,
+    "transformer": PulseTransformerModel,
     # Add other models here as needed
 }
