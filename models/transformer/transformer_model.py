@@ -12,10 +12,13 @@ class PulseTransformerModel(nn.Module):
 
         # pulse → token
         self.mlp = nn.Sequential(
-            nn.Linear(config.pulse_len, config.d_model),
+            nn.Linear(config.pulse_len, config.d_model * 2),
             nn.GELU(),
-            nn.Linear(config.d_model, config.d_model),
-            nn.LayerNorm(config.d_model),
+            nn.LayerNorm(config.d_model * 2),
+            nn.Linear(config.d_model * 2, config.d_model * 2),
+            nn.GELU(),
+            nn.LayerNorm(config.d_model * 2),
+            nn.Linear(config.d_model * 2, config.d_model),
         )
 
         # positional embedding (pulse index)
