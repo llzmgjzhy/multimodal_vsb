@@ -12,10 +12,15 @@ class MLP_Model(nn.Module):
         self.pulse_num = config.pulse_num
 
         self.net = nn.Sequential(
+            nn.LayerNorm(config.pulse_len),
             nn.Linear(config.pulse_len, config.d_model),
             nn.GELU(),
-            nn.Linear(config.d_model, config.d_model),
             nn.LayerNorm(config.d_model),
+            nn.Linear(config.d_model, config.d_model),
+            nn.GELU(),
+            nn.LayerNorm(config.d_model),
+            nn.Linear(config.d_model, config.d_model),
+            nn.GELU(),
             nn.Linear(config.d_model, self.num_classes),
         )
 
