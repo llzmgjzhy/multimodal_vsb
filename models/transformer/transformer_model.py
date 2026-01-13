@@ -2,23 +2,47 @@ import torch.nn as nn
 import torch
 
 
+class PulseMLP(nn.Module):
+    def __init__(self, pulse_len=30, d_model=64, hidden=128):
+        super().__init__()
+
+        self.in_proj = nn.Sequential(
+            nn.LayerNorm(pulse_len),
+            nn.Linear(pulse_len, hidden),
+            nn.GELU(),
+        )
+
+        self.block = nn.Sequential(
+            nn.Linear(hidden, hidden),
+            nn.GELU(),
+        )
+
+        self.out_proj = nn.Sequential(
+            nn.LayerNorm(hidden),
+            nn.Linear(hidden, d_model),
+        )
+
+    def forward(self, x):
+        # x: [B,160,30]
+        h = self.in_proj(x)  # [B,160,hidden]
+        h = self.block(h)  # residual
+        h = self.out_proj(h)  # [B,160,d_model]
+        return h
+
+
 class PulseTransformerModel(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.num_classes = 2 if config.task == "classification" else 1
         self.pulse_len = config.pulse_len
         self.pulse_num = config.pulse_num
-        self.use_cls_token = False
+        self.use_cls_token = True
 
         # pulse → token
-        self.mlp = nn.Sequential(
-            nn.Linear(config.pulse_len, config.d_model * 2),
-            nn.GELU(),
-            nn.LayerNorm(config.d_model * 2),
-            nn.Linear(config.d_model * 2, config.d_model * 2),
-            nn.GELU(),
-            nn.LayerNorm(config.d_model * 2),
-            nn.Linear(config.d_model * 2, config.d_model),
+        self.mlp = PulseMLP(
+            pulse_len=config.pulse_len,
+            d_model=config.d_model,
+            hidden=config.d_model * 2,
         )
 
         # positional embedding (pulse index)
@@ -43,7 +67,7 @@ class PulseTransformerModel(nn.Module):
 
         self.transformer = nn.TransformerEncoder(
             encoder_layer,
-            num_layers=2,
+            num_layers=1,
         )
 
         self.head = nn.Linear(config.d_model, 1)

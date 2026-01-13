@@ -137,7 +137,7 @@ def get_args():
     parser.add_argument(
         "--data_dir",
         type=str,
-        default="E:\\Graduate\\projects\\multimodal_vsb_20251208\\research\\data\\",
+        default="E:\\Graduate\\projects\\multimodal_vsb_20251208\\research\\code\\dataset\\VSBdata",
         help="Directory containing the data files",
     )
     return parser.parse_args()
