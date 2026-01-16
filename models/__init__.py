@@ -6,6 +6,8 @@ from .SingleCNN.cnn import SinglePulseCNN
 from .gru.gru_model import PulseGRUModel
 from .mlp_cnn.mlp_cnn import PulseConvModel
 from .transformer.transformer_model import PulseTransformerModel
+from .cnn_mlp.cnn_mlp import PulseEncoder
+from .prototype.prototype import SimpleDeepClusteringModel
 
 model_factory = {
     "one_fits_all": gpt4ts,
@@ -16,5 +18,7 @@ model_factory = {
     "gru": PulseGRUModel,
     "mlp_cnn": PulseConvModel,
     "transformer": PulseTransformerModel,
+    "cnn_mlp": PulseEncoder,
+    "prototype_simple": SimpleDeepClusteringModel,
     # Add other models here as needed
 }

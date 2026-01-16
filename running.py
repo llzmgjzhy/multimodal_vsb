@@ -87,6 +87,9 @@ def pipeline_factory(config):
     if task == "classification":
         return ClassificationRunner
 
+    if task == "cluster":
+        return Cluster_Runner
+
     else:
         raise NotImplementedError("Task '{}' not implemented".format(task))
 
@@ -269,6 +272,115 @@ class Anomaly_Detection_Runner(BaseRunner):
             return self.epoch_metrics
 
 
+class Cluster_Runner(BaseRunner):
+    def __init__(self, *args, **kwargs):
+
+        super(Cluster_Runner, self).__init__(*args, **kwargs)
+
+    def train_epoch(self, epoch_num=None):
+
+        self.model = self.model.train()
+
+        epoch_loss = 0  # total loss of epoch
+        total_samples = 0  # total samples in epoch
+
+        try:
+            for i, batch in enumerate(self.dataloader):
+                self.optimizer.zero_grad()
+
+                X, targets = batch
+                X = X.float().to(device=self.device)
+                targets = targets.float().to(device=self.device)
+                outputs = self.model(X)
+
+                loss = self.loss_module(outputs, targets)
+                batch_loss = loss.sum()
+                mean_loss = loss.mean()
+
+                backward_loss = mean_loss
+
+                backward_loss.backward()
+                self.optimizer.step()
+
+                metrics = {"loss": mean_loss.item()}
+                if i % self.print_interval == 0:
+                    ending = "" if epoch_num is None else "Epoch {} ".format(epoch_num)
+                    self.print_callback(i, metrics, prefix="Training " + ending)
+
+                with torch.no_grad():
+                    total_samples += loss.numel()
+                    epoch_loss += batch_loss.item()  # add total loss of batch
+
+        except KeyboardInterrupt:
+            print("KeyboardInterrupt detected (Ctrl+C)")
+            sys.exit(0)
+            del self.dataloader
+
+        epoch_loss = (
+            epoch_loss / total_samples
+        )  # average loss per sample for whole epoch
+        self.epoch_metrics["epoch"] = epoch_num
+        self.epoch_metrics["loss"] = epoch_loss
+        return self.epoch_metrics
+
+    def evaluate(self, epoch_num=None, keep_all=True):
+
+        self.model = self.model.eval()
+
+        epoch_loss = 0  # total loss of epoch
+        total_samples = 0  # total samples in epoch
+
+        per_batch = {
+            "target_masks": [],
+            "targets": [],
+            "outputs": [],
+            "metrics": [],
+        }
+
+        try:
+            for i, batch in enumerate(self.dataloader):
+
+                X, targets = batch
+                X = X.float().to(self.device)
+                targets = targets.float().to(device=self.device)
+                outputs = self.model(X)
+
+                loss = self.loss_module(outputs, targets)
+                batch_loss = loss.sum()
+                mean_loss = loss.mean()  # mean loss (over samples)
+                # (batch_size,) loss for each sample in the batch
+
+                per_batch["targets"].append(targets.half().cpu().numpy())
+                per_batch["outputs"].append(outputs.half().cpu().numpy())
+                per_batch["metrics"].append([loss.half().cpu().numpy()])
+
+                metrics = {
+                    "loss": mean_loss,
+                }
+                if i % self.print_interval == 0:
+                    ending = "" if epoch_num is None else "Epoch {} ".format(epoch_num)
+                    self.print_callback(i, metrics, prefix="Evaluating " + ending)
+
+                total_samples += loss.numel()
+                epoch_loss += batch_loss.half().cpu().item()
+
+        except KeyboardInterrupt:
+            print("KeyboardInterrupt detected (Ctrl+C)")
+            sys.exit(0)
+            del self.dataloader
+
+        epoch_loss = (
+            epoch_loss / total_samples
+        )  # average loss per element for whole epoch
+        self.epoch_metrics["epoch"] = epoch_num
+        self.epoch_metrics["loss"] = epoch_loss
+
+        if keep_all:
+            return self.epoch_metrics, per_batch
+        else:
+            return self.epoch_metrics
+
+
 class ClassificationRunner(BaseRunner):
     def __init__(self, *args, **kwargs):
 
@@ -438,7 +550,7 @@ def validate(
     if condition:
         best_value = aggr_metrics[config.key_metric]
         utils.save_model(
-            os.path.join(config.save_dir, "model_best.pth"),
+            os.path.join(config.save_dir, f"model_best_fold_{fold_i}.pth"),
             epoch,
             val_evaluator.model,
         )
@@ -449,6 +561,9 @@ def validate(
             np.concatenate(per_batch["outputs"], axis=0)
         )  # [N, 2]
         test_labels = np.concatenate(per_batch["targets"], axis=0).reshape(-1)
+
+        if config.task == "cluster":
+            return aggr_metrics, best_metrics, best_value
 
         df = pd.DataFrame(
             {

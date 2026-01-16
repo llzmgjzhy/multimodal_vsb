@@ -17,6 +17,7 @@ class Options(object):
                 "fault_detection",
                 "classification",
                 "forecast",
+                "cluster",
             },
             default="classification",
             help=(
@@ -245,7 +246,7 @@ class Options(object):
         )
         self.parser.add_argument(
             "--loss",
-            choices={"cross_entropy", "focal", "mse", "bce"},
+            choices={"cross_entropy", "focal", "mse", "bce", "cluster"},
             default="cross_entropy",
             help="loss used for train model",
         )
