@@ -4,58 +4,70 @@ import torch.nn.functional as F
 
 
 class PulseEncoder(nn.Module):
-    def __init__(self, pulse_len=30, d_model=64):
+    def __init__(self, in_dim=30, hidden_dim=64, out_dim=128):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(pulse_len, d_model),
-            nn.GELU(),
-            nn.Linear(d_model, d_model),
-            nn.LayerNorm(d_model),
+            nn.Linear(in_dim, hidden_dim), nn.GELU(), nn.Linear(hidden_dim, out_dim)
         )
 
     def forward(self, x):
         # x: [B, N, 30]
-        return self.net(x)  # [B, N, d_model]
+        return self.net(x)  # [B, N, d]
 
 
-class DeepClustering(nn.Module):
-    def __init__(self, d_model=64, K=6, temp=0.1):
+class ProtoCrossAttention(nn.Module):
+    def __init__(self, dim=128, num_heads=4):
         super().__init__()
-        self.K = K
-        self.temp = temp
+        self.attn = nn.MultiheadAttention(
+            embed_dim=dim, num_heads=num_heads, batch_first=True
+        )
 
-        self.centroids = nn.Parameter(torch.randn(K, d_model))
-        nn.init.xavier_uniform_(self.centroids)
+    def forward(self, z, prototypes):
+        # z: [B, N, d]
+        # prototypes: [K, d] → expand to batch
 
-    def forward(self, z):
-        """
-        z: [B, N, d_model]
-        """
-        z = F.normalize(z, dim=-1)
-        c = F.normalize(self.centroids, dim=-1)
+        B = z.size(0)
+        proto = prototypes.unsqueeze(0).expand(B, -1, -1)
 
-        # similarity
-        sim = torch.einsum("bnd,kd->bnk", z, c)
+        attn_out, _ = self.attn(query=z, key=proto, value=proto)
 
-        # soft assignment
-        assign = F.softmax(sim / self.temp, dim=-1)
-
-        return assign, sim
+        return z + attn_out
 
 
-class SimpleDeepClusteringModel(nn.Module):
+class ProtoModelB3(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.pulse_len = config.pulse_len
-        self.d_model = config.d_model
-        self.K = 6
-        self.encoder = PulseEncoder(config.pulse_len, config.d_model)
-        self.cluster = DeepClustering(config.d_model, self.K)
+        in_dim = config.pulse_len
+        d_model = config.d_model
+        num_proto = 6
+        self.use_cls_token = True
+        self.encoder = PulseEncoder(in_dim, 64, d_model)
+        self.prototypes = nn.Parameter(torch.randn(num_proto, d_model))
+
+        self.proto_attn = ProtoCrossAttention(d_model)
+
+        self.encoder_blocks = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(d_model=d_model, nhead=4, batch_first=True),
+            num_layers=2,
+        )
+        if self.use_cls_token:
+            self.cls_token = nn.Parameter(torch.randn(1, 1, config.d_model))
+
+        self.head = nn.Linear(d_model, 1)
 
     def forward(self, x):
-        """
-        x: [B, 160, 30]
-        """
-        z = self.encoder(x)
-        assign, sim = self.cluster(z)
-        return assign
+        B, N, _ = x.shape
+        z = self.encoder(x)  # [B,N,d]
+        z = self.proto_attn(z, self.prototypes)
+        if self.use_cls_token:
+            cls = self.cls_token.expand(B, -1, -1)  # [B, 1, d_model]
+            z = torch.cat([cls, z], dim=1)  # [B, 161, d_model]
+        z = self.encoder_blocks(z)
+
+        if self.use_cls_token:
+            z = z[:, 0]  # [B, d_model]
+        else:
+            z = z.mean(dim=1)  # mean pooling
+        out = self.head(z)
+
+        return out.squeeze(-1)
