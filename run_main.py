@@ -192,7 +192,7 @@ def main(config):
         # test
         model.load_state_dict(
             torch.load(
-                os.path.join(config.save_dir, "model_best.pth"), weights_only=True
+                os.path.join(config.save_dir, f"model_best_fold_{fold_i}.pth"), weights_only=True
             )["state_dict"]
         )
         aggr_metrics_test = test(
