@@ -71,3 +71,4 @@ class ProtoModelB3(nn.Module):
         out = self.head(z)
 
         return out.squeeze(-1)
+

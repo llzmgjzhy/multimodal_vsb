@@ -35,3 +35,18 @@ class MLP_Model(nn.Module):
         )  # [b, 1]
 
         return outputs.squeeze(-1)
+
+
+class PulseMLPBaseline(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        in_dim = config.pulse_len
+        d = config.d_model
+        self.encoder = nn.Sequential(nn.Linear(in_dim, 64), nn.GELU(), nn.Linear(64, d))
+        self.head = nn.Sequential(nn.Linear(d, 64), nn.GELU(), nn.Linear(64, 1))
+
+    def forward(self, x):
+        z = self.encoder(x)  # [B,N,d]
+        z = z.mean(dim=1)  # signal embedding
+        out = self.head(z)
+        return out.squeeze(-1)
