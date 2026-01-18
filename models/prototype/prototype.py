@@ -34,6 +34,51 @@ class ProtoCrossAttention(nn.Module):
         return z + attn_out
 
 
+class PrototypeLayer(nn.Module):
+    def __init__(self, num_proto=8, dim=128, temperature=0.1):
+        super().__init__()
+        self.prototypes = nn.Parameter(torch.randn(num_proto, dim))
+        self.temperature = temperature
+
+    def forward(self, z):
+        z_norm = F.normalize(z, dim=-1)
+        p_norm = F.normalize(self.prototypes, dim=-1)
+
+        logits = torch.einsum("bnd,kd->bnk", z_norm, p_norm)
+        assign = F.softmax(logits / self.temperature, dim=-1)
+
+        return assign, self.prototypes
+
+
+class ProtoEnrichMLP(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        in_dim = config.pulse_len
+        d = config.d_model
+        num_proto = 6
+        self.encoder = nn.Sequential(
+            nn.Linear(in_dim, 64), nn.GELU(), nn.Linear(64, d), nn.LayerNorm(d)
+        )
+
+        self.proto = PrototypeLayer(num_proto, d)
+
+        self.fuse = nn.Sequential(nn.Linear(d * 2, d), nn.GELU())
+
+        self.head = nn.Sequential(nn.Linear(d, 64), nn.GELU(), nn.Linear(64, 1))
+
+    def forward(self, x):
+        z = self.encoder(x)  # [B,N,d]
+        assign, protos = self.proto(z)
+
+        proto_ctx = torch.einsum("bnk,kd->bnd", assign, protos)
+
+        z = self.fuse(torch.cat([z, proto_ctx], dim=-1))
+        z = z.mean(dim=1)
+
+        out = self.head(z)
+        return out.squeeze(-1)
+
+
 class ProtoModelB3(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -71,4 +116,3 @@ class ProtoModelB3(nn.Module):
         out = self.head(z)
 
         return out.squeeze(-1)
-

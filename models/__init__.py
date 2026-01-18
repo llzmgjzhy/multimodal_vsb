@@ -7,7 +7,7 @@ from .gru.gru_model import PulseGRUModel
 from .mlp_cnn.mlp_cnn import PulseConvModel
 from .transformer.transformer_model import PulseTransformerModel
 from .cnn_mlp.cnn_mlp import PulseEncoder
-from .prototype.prototype import ProtoModelB3
+from .prototype.prototype import ProtoModelB3,ProtoEnrichMLP
 
 model_factory = {
     "one_fits_all": gpt4ts,
@@ -19,6 +19,6 @@ model_factory = {
     "mlp_cnn": PulseConvModel,
     "transformer": PulseTransformerModel,
     "cnn_mlp": PulseEncoder,
-    "prototype_simple": ProtoModelB3,
+    "prototype_simple": ProtoEnrichMLP,
     # Add other models here as needed
 }
