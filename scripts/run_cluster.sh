@@ -1,4 +1,4 @@
-model=prototype_simple
+model=prototype_stats
 batch_size=32
 epochs=100
 lr=1e-4

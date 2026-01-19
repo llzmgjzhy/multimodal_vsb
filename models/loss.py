@@ -24,9 +24,7 @@ def get_loss_module(config):
         return lambda inp, target: sigmoid_focal_loss(inp, target, reduction="none")
 
     if loss_type == "cluster":
-        return lambda assign, traget: cluster_balance_loss(
-            assign
-        ) + 0.1 * sharp_assignment_loss(assign)
+        return lambda assign, traget: assign.mean()
 
     else:
         raise ValueError(f"Loss module for '{loss_type}' does not exist")
