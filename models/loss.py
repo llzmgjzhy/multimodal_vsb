@@ -24,19 +24,17 @@ def get_loss_module(config):
         return lambda inp, target: sigmoid_focal_loss(inp, target, reduction="none")
 
     if loss_type == "cluster":
-        return lambda assign, traget: assign['var'].mean()
+        return lambda stats, traget: (
+            stats["var"].mean()
+            + 0.2
+            * F.kl_div(
+                (stats["assign"].mean(dim=(0, 1)) + 1e-8).log(),
+                torch.full_like(
+                    stats["assign"].mean(dim=(0, 1)), 1.0 / stats["assign"].size(-1)
+                ),
+                reduction="batchmean",
+            )
+        )
 
     else:
         raise ValueError(f"Loss module for '{loss_type}' does not exist")
-
-
-def cluster_balance_loss(assign):
-    """
-    Encourage all clusters to be used
-    """
-    p = assign.mean(dim=(0, 1))  # [K]
-    return torch.sum(p * torch.log(p + 1e-8))
-
-
-def sharp_assignment_loss(assign):
-    return -(assign * torch.log(assign + 1e-8)).sum(dim=-1).mean()

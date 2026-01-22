@@ -355,7 +355,7 @@ class Cluster_Runner(BaseRunner):
                 # (batch_size,) loss for each sample in the batch
 
                 per_batch["targets"].append(targets.half().cpu().numpy())
-                per_batch["outputs"].append(outputs.half().cpu().numpy())
+                per_batch["outputs"].append(outputs["var"].half().cpu().numpy())
                 per_batch["metrics"].append([loss.half().cpu().numpy()])
 
                 metrics = {
