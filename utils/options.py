@@ -32,6 +32,11 @@ class Options(object):
             help="Root output directory. Must exist. Time-stamped directories will be created inside.",
         )
         self.parser.add_argument(
+            "--cluster_dir",
+            default="cluster_vsb_2026-01-19_19-49-29_LNw",
+            help="Directory of saved clustering model for evaluation",
+        )
+        self.parser.add_argument(
             "--name",
             dest="experiment_name",
             default="",

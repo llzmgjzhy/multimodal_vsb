@@ -43,7 +43,7 @@ class PrototypeStats(nn.Module):
 
         # dispersion
         diff = z.unsqueeze(2) - self.prototypes.unsqueeze(0).unsqueeze(0)
-        dist2 = diff.pow(2).sum(-1)    # [B, N, K]
+        dist2 = diff.pow(2).sum(-1)  # [B, N, K]
         var = torch.einsum("bnk,bnk->bk", assign, dist2)
         var = var / count
 
@@ -86,4 +86,4 @@ class DL_SOTA_PrototypeNet(nn.Module):
         stats = self.proto(z)
         feat = self.agg(stats)
         out = self.head(feat)
-        return stats['var']
+        return stats

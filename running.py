@@ -9,6 +9,10 @@ from collections import OrderedDict
 import torch
 import time
 import numpy as np
+import math
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
+from sklearn.metrics import silhouette_score, davies_bouldin_score
 import sys
 import pandas as pd
 from sklearn.metrics import (
@@ -635,3 +639,94 @@ def test(test_evaluator, val_evaluator, config, fold_i=0):
     df.to_csv(os.path.join(config.pred_dir, f"test_pred_{fold_i}.csv"), index=False)
 
     return aggr_metrics
+
+
+def eval_prototype_distance(model):
+    with torch.no_grad():
+        P = model.proto.prototypes  # [K, D]
+        dist = torch.cdist(P, P)  # [K, K]
+
+    print("Prototype distance matrix:")
+    print(dist.cpu().numpy())
+    print(
+        "Mean off-diagonal distance:",
+        dist[~torch.eye(dist.size(0), dtype=bool)].mean().item(),
+    )
+
+    import math
+
+
+def eval_assignment_entropy(assign):
+    # assign: [B, N, K]
+    eps = 1e-8
+    entropy = -(assign * (assign + eps).log()).sum(-1)  # [B, N]
+    entropy = entropy.mean().item()
+
+    print(f"Mean assignment entropy: {entropy:.4f}")
+    print(f"log(K): {math.log(assign.size(-1)):.4f}")
+
+
+def eval_prototype_usage(assign):
+    # assign: [B, N, K]
+    usage = assign.mean(dim=(0, 1))  # [K]
+    print("Prototype usage:")
+    for i, u in enumerate(usage):
+        print(f"  Proto {i}: {u.item():.4f}")
+
+
+def visualize_embedding(z, assign, num_samples=10000):
+    """
+    z: [B, N, D]
+    assign: [B, N, K]
+    """
+    z = z.reshape(-1, z.size(-1)).cpu().numpy()
+    label = assign.argmax(-1).reshape(-1).cpu().numpy()
+
+    idx = np.random.choice(len(z), min(num_samples, len(z)), replace=False)
+    z = z[idx]
+    label = label[idx]
+
+    tsne = TSNE(n_components=2, perplexity=30, init="pca")
+    z_2d = tsne.fit_transform(z)
+
+    plt.figure(figsize=(6, 5))
+    plt.scatter(z_2d[:, 0], z_2d[:, 1], c=label, s=3, cmap="tab10")
+    plt.title("Pulse embedding colored by prototype")
+    plt.show()
+
+
+def eval_clustering_metrics(z, assign):
+    z = z.reshape(-1, z.size(-1)).cpu().numpy()
+    label = assign.argmax(-1).reshape(-1).cpu().numpy()
+
+    sil = silhouette_score(z, label)
+    db = davies_bouldin_score(z, label)
+
+    print(f"Silhouette score: {sil:.4f}")
+    print(f"Davies-Bouldin index: {db:.4f}")
+
+
+def evaluate_prototype_model(model, dataloader, device):
+    model.eval()
+
+    all_z = []
+    all_assign = []
+
+    with torch.no_grad():
+        for i, batch in enumerate(dataloader):
+            x, targets = batch
+            x = x.to(device)
+            z = model.encoder(x)
+            stats = model(x)
+
+            all_z.append(z)
+            all_assign.append(stats["assign"])
+
+    z = torch.cat(all_z, dim=0)
+    assign = torch.cat(all_assign, dim=0)
+
+    eval_prototype_distance(model)
+    eval_assignment_entropy(assign)
+    eval_prototype_usage(assign)
+    visualize_embedding(z, assign)
+    eval_clustering_metrics(z, assign)
