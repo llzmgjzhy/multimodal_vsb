@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from models.unsupervised_learning.prototype.prototype_stats import DL_SOTA_PrototypeNet
 
 
 class PulseEncoder(nn.Module):
@@ -56,19 +57,23 @@ class ProtoEnrichMLP(nn.Module):
         in_dim = config.pulse_len
         d = config.d_model
         num_proto = 6
-        self.encoder = nn.Sequential(
-            nn.Linear(in_dim, 64), nn.GELU(), nn.Linear(64, d), nn.LayerNorm(d)
+        self.stage1_model = DL_SOTA_PrototypeNet(config)
+        self.stage1_model.eval()
+        for param in self.stage1_model.parameters():
+            param.requires_grad = False
+
+        self.fuse = nn.Sequential(
+            nn.Linear(2 * d, d),
+            nn.LayerNorm(d),
+            nn.GELU(),
         )
-
-        self.proto = PrototypeLayer(num_proto, d)
-
-        self.fuse = nn.Sequential(nn.Linear(d * 2, d), nn.GELU())
-
         self.head = nn.Sequential(nn.Linear(d, 64), nn.GELU(), nn.Linear(64, 1))
 
     def forward(self, x):
-        z = self.encoder(x)  # [B,N,d]
-        assign, protos = self.proto(z)
+        z = self.stage1_model.encoder(x)  # [B,N,d]
+        stats = self.stage1_model.proto(z)
+        assign = stats["assign"]  # [B,N,K]
+        protos = stats["prototypes"]  # [K,D]
 
         proto_ctx = torch.einsum("bnk,kd->bnd", assign, protos)
 
