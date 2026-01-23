@@ -25,7 +25,9 @@ def get_loss_module(config):
 
     if loss_type == "cluster":
         return lambda stats, traget: (
-            stats["var"].mean()
+            (stats["assign"] * torch.cdist(stats["z"], stats["prototypes"]).pow(2))
+            .sum(-1)
+            .mean()
             + 0.2
             * F.kl_div(
                 (stats["assign"].mean(dim=(0, 1)) + 1e-8).log(),

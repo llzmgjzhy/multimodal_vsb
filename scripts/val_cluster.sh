@@ -25,6 +25,6 @@ python val_cluster.py \
     --dropout 0.1 \
     --patience 20 \
     --phase_level \
-    --cluster_dir cluster_vsb_2026-01-22_17-23-06_NfV \
+    --cluster_dir cluster_vsb_2026-01-22_20-02-52_VBC \
 
     # --weight_decay 1e-3 \

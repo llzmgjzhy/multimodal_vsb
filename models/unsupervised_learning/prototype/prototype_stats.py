@@ -32,8 +32,9 @@ class PrototypeStats(nn.Module):
         B, N, D = z.shape
 
         # [B, N, K]
-        logits = torch.einsum("bnd,kd->bnk", z, self.prototypes)
-        assign = torch.softmax(logits / self.temp, dim=-1)
+        # logits = torch.einsum("bnd,kd->bnk", z, self.prototypes)
+        dist = torch.cdist(z, self.prototypes)
+        assign = torch.softmax(-dist / self.temp, dim=-1)
 
         # soft count
         count = assign.sum(dim=1) + 1e-6  # [B, K]
@@ -52,6 +53,8 @@ class PrototypeStats(nn.Module):
             "count": count,  # [B, K]
             "mean": mean,  # [B, K, D]
             "var": var,  # [B, K]
+            "z": z,
+            "prototypes": self.prototypes,  # [K, D]
         }
 
 
