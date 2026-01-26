@@ -58,9 +58,9 @@ class ProtoEnrichMLP(nn.Module):
         d = config.d_model
         num_proto = 6
         self.stage1_model = DL_SOTA_PrototypeNet(config)
-        self.stage1_model.eval()
-        for param in self.stage1_model.parameters():
-            param.requires_grad = False
+        # self.stage1_model.eval()
+        # for param in self.stage1_model.parameters():
+        #     param.requires_grad = False
 
         self.fuse = nn.Sequential(
             nn.Linear(2 * d, d),

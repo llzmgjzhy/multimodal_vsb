@@ -33,7 +33,6 @@ class Options(object):
         )
         self.parser.add_argument(
             "--cluster_dir",
-            default="cluster_vsb_2026-01-19_19-49-29_LNw",
             help="Directory of saved clustering model for evaluation",
         )
         self.parser.add_argument(
