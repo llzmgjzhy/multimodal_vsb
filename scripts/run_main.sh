@@ -1,6 +1,6 @@
-model=prototype_simple
+model=patchtst
 batch_size=32
-epochs=50
+epochs=100
 lr=1e-4
 itr=1
 task=fault_detection # fault_detection or classification
@@ -25,4 +25,7 @@ python run_main.py \
     --dropout 0.1 \
     --patience 20 \
     --phase_level \
+    --n_layers 3 \
+    --n_heads 4 \
+    --d_ff 128 \
     # --weight_decay 1e-3 \
