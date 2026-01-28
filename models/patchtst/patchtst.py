@@ -26,7 +26,7 @@ class Model(nn.Module):
         res_attention: bool = True
         pre_norm: bool = False
         store_attn: bool = False
-        pe: str = "zeros"
+        pe: str = None
         learn_pe: bool = True
         pretrain_head: bool = False
         head_type = "flatten"

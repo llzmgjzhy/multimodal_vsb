@@ -95,7 +95,7 @@ class PatchTST_backbone(nn.Module):
         )
 
         # Head
-        self.head_nf = d_model * patch_num
+        self.head_nf = d_model * 1
         self.n_vars = c_in
         self.pretrain_head = pretrain_head
         self.head_type = head_type
@@ -163,6 +163,7 @@ class Flatten_Head(nn.Module):
             self.flatten = nn.Flatten(start_dim=-2)
             self.linear = nn.Linear(nf, target_window)
             self.dropout = nn.Dropout(head_dropout)
+            self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):  # x: [bs x nvars x d_model x patch_num]
         if self.individual:
@@ -174,9 +175,11 @@ class Flatten_Head(nn.Module):
                 x_out.append(z)
             x = torch.stack(x_out, dim=1)  # x: [bs x nvars x target_window]
         else:
+            x = x[:, :, :, 0]  # x: [bs x nvars x d_model x cls_token]
             x = self.flatten(x)
-            x = self.linear(x)
             x = self.dropout(x)
+            x = self.linear(x)
+
         return x
 
 
@@ -222,7 +225,10 @@ class TSTiEncoder(nn.Module):  # i means channel-independent
         self.seq_len = q_len
 
         # Positional encoding
-        self.W_pos = positional_encoding(pe, learn_pe, q_len, d_model)
+        self.W_pos = positional_encoding(pe, learn_pe, q_len + 1, d_model)
+
+        # cls token
+        self.cls_token = nn.Parameter(torch.randn(1, 1, 1, d_model))
 
         # Residual dropout
         self.dropout = nn.Dropout(dropout)
@@ -251,6 +257,10 @@ class TSTiEncoder(nn.Module):  # i means channel-independent
         # Input encoding
         x = x.permute(0, 1, 3, 2)  # x: [bs x nvars x patch_num x patch_len]
         x = self.W_P(x)  # x: [bs x nvars x patch_num x d_model]
+        # add cls token
+        x = torch.cat(
+            [self.cls_token.expand(x.size(0), -1, -1, -1), x], dim=2
+        )  # x: [bs x nvars x (1 + patch_num) x d_model]
 
         u = torch.reshape(
             x, (x.shape[0] * x.shape[1], x.shape[2], x.shape[3])

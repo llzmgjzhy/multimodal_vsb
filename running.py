@@ -275,6 +275,85 @@ class Anomaly_Detection_Runner(BaseRunner):
         else:
             return self.epoch_metrics
 
+    def test(self, epoch_num=None, keep_all=True, threshold=0.5):
+
+        self.model = self.model.eval()
+
+        epoch_loss = 0  # total loss of epoch
+        total_samples = 0  # total samples in epoch
+
+        per_batch = {
+            "target_masks": [],
+            "targets": [],
+            "outputs": [],
+            "metrics": [],
+        }
+
+        try:
+            for i, batch in enumerate(self.dataloader):
+
+                X, targets = batch
+                X = X.float().to(self.device)
+                targets = targets.float().to(device=self.device)
+                outputs = self.model(X)
+
+                loss = self.loss_module(outputs, targets)
+                batch_loss = loss.sum()
+                mean_loss = loss.mean()  # mean loss (over samples)
+                # (batch_size,) loss for each sample in the batch
+
+                per_batch["targets"].append(targets.half().cpu().numpy())
+                per_batch["outputs"].append(outputs.half().cpu().numpy())
+                per_batch["metrics"].append([loss.half().cpu().numpy()])
+
+                metrics = {
+                    "loss": mean_loss,
+                }
+                if i % self.print_interval == 0:
+                    ending = "" if epoch_num is None else "Epoch {} ".format(epoch_num)
+                    self.print_callback(i, metrics, prefix="Evaluating " + ending)
+
+                total_samples += loss.numel()
+                epoch_loss += batch_loss.half().cpu().item()
+
+        except KeyboardInterrupt:
+            print("KeyboardInterrupt detected (Ctrl+C)")
+            sys.exit(0)
+            del self.dataloader
+
+        epoch_loss = (
+            epoch_loss / total_samples
+        )  # average loss per element for whole epoch
+        self.epoch_metrics["epoch"] = epoch_num
+        self.epoch_metrics["loss"] = epoch_loss
+
+        pred = torch.from_numpy(np.concatenate(per_batch["outputs"], axis=0))
+        test_labels = np.concatenate(per_batch["targets"], axis=0).reshape(-1)
+
+        # get threshold
+        best_threshold = threshold
+        pred = (pred > best_threshold).cpu().numpy()
+        gt = np.array(test_labels).astype(int)
+
+        accuracy = accuracy_score(gt, pred)
+        precision, recall, f_score, support = precision_recall_fscore_support(
+            gt, pred, average="binary"
+        )
+        mcc = matthews_correlation(gt, pred).item()
+        auc = roc_auc_score(gt, pred)
+
+        self.epoch_metrics["accuracy"] = accuracy
+        self.epoch_metrics["precision"] = precision
+        self.epoch_metrics["recall"] = recall
+        self.epoch_metrics["f1"] = f_score
+        self.epoch_metrics["mcc"] = mcc
+        self.epoch_metrics["auc"] = auc
+
+        if keep_all:
+            return self.epoch_metrics, per_batch
+        else:
+            return self.epoch_metrics
+
 
 class Cluster_Runner(BaseRunner):
     def __init__(self, *args, **kwargs):
@@ -597,7 +676,9 @@ def test(test_evaluator, val_evaluator, config, fold_i=0):
 
     eval_start_time = time.time()
     with torch.no_grad():
-        aggr_metrics, per_batch = test_evaluator.evaluate(keep_all=True)
+        aggr_metrics, per_batch = test_evaluator.test(
+            keep_all=True, threshold=best_threshold
+        )
         del aggr_metrics["epoch"]
     eval_runtime = time.time() - eval_start_time
     logger.info(
