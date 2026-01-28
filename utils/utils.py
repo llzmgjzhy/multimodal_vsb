@@ -351,3 +351,46 @@ def itr_test_result(config):
     )
 
     return result
+
+
+def augment_pulse_set_vsb(
+    x,
+    drop_rate=0.1,
+    noise_std=0.01,
+    scale_std=0.05,
+    shuffle=False,
+    min_keep=128,
+):
+    """
+    专为 VSB 异常检测任务设计的集合级增广函数。
+    x: [B, 160, 30]
+    """
+    B, N, D = x.shape
+    device = x.device
+
+    # 随机 drop
+    keep_num = int(N * (1 - drop_rate))
+    keep_num = max(keep_num, min_keep)
+
+    mask = torch.zeros(B, N, device=device)
+    for i in range(B):
+        idx = torch.randperm(N)[:keep_num]
+        mask[i, idx] = 1.0
+    mask = mask.unsqueeze(-1)  # [B, N, 1]
+
+    # 高斯噪声 + 缩放
+    noise = torch.randn_like(x) * noise_std
+    scale = 1.0 + torch.randn(B, N, 1, device=device) * scale_std
+    x_aug = (x + noise) * scale
+
+    # 应用 drop 掩码
+    x_aug = x_aug * mask
+
+    # 可选 shuffle（保证顺序无关性）
+    if shuffle:
+        for i in range(B):
+            perm = torch.randperm(N)
+            x_aug[i] = x_aug[i, perm]
+            mask[i] = mask[i, perm]
+
+    return x_aug, mask

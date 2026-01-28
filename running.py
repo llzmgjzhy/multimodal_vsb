@@ -20,7 +20,7 @@ from sklearn.metrics import (
     accuracy_score,
     roc_auc_score,
 )
-from utils.utils import matthews_correlation, eval_mcc
+from utils.utils import matthews_correlation, eval_mcc, augment_pulse_set_vsb
 
 logger = logging.getLogger("__main__")
 
@@ -373,10 +373,13 @@ class Cluster_Runner(BaseRunner):
 
                 X, targets = batch
                 X = X.float().to(device=self.device)
-                targets = targets.float().to(device=self.device)
-                outputs = self.model(X)
+                x1, _ = augment_pulse_set_vsb(X)
+                x2, _ = augment_pulse_set_vsb(X)
 
-                loss = self.loss_module(outputs, targets)
+                z1 = self.model(x1)
+                z2 = self.model(x2)
+
+                loss = self.loss_module(z1, z2)
                 batch_loss = loss.sum()
                 mean_loss = loss.mean()
 
@@ -425,16 +428,19 @@ class Cluster_Runner(BaseRunner):
 
                 X, targets = batch
                 X = X.float().to(self.device)
-                targets = targets.float().to(device=self.device)
-                outputs = self.model(X)
+                x1, _ = augment_pulse_set_vsb(X)
+                x2, _ = augment_pulse_set_vsb(X)
 
-                loss = self.loss_module(outputs, targets)
+                z1 = self.model(x1)
+                z2 = self.model(x2)
+
+                loss = self.loss_module(z1, z2)
                 batch_loss = loss.sum()
                 mean_loss = loss.mean()  # mean loss (over samples)
                 # (batch_size,) loss for each sample in the batch
 
                 per_batch["targets"].append(targets.half().cpu().numpy())
-                per_batch["outputs"].append(outputs["var"].half().cpu().numpy())
+                per_batch["outputs"].append(loss.half().cpu().numpy())  # dummy
                 per_batch["metrics"].append([loss.half().cpu().numpy()])
 
                 metrics = {
@@ -639,14 +645,14 @@ def validate(
         )
         best_metrics = aggr_metrics.copy()
 
+        if config.task == "cluster":
+            return aggr_metrics, best_metrics, best_value
+
         # save per-batch predictions
         logits = torch.from_numpy(
             np.concatenate(per_batch["outputs"], axis=0)
         )  # [N, 2]
         test_labels = np.concatenate(per_batch["targets"], axis=0).reshape(-1)
-
-        if config.task == "cluster":
-            return aggr_metrics, best_metrics, best_value
 
         df = pd.DataFrame(
             {

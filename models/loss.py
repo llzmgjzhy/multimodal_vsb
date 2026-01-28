@@ -38,5 +38,32 @@ def get_loss_module(config):
             )
         )
 
+    if loss_type == "contrastive":
+        return contrastive_loss
+
     else:
         raise ValueError(f"Loss module for '{loss_type}' does not exist")
+
+
+def contrastive_loss(z1, z2, temperature=0.2):
+    """
+    z1, z2: [B, D] 两个增广视图的表示
+    """
+    B = z1.size(0)
+    z = torch.cat([z1, z2], dim=0)  # [2B, D]
+    z = F.normalize(z, dim=1)  # 单位向量
+
+    # 相似度矩阵
+    sim = torch.matmul(z, z.T) / temperature  # [2B, 2B]
+
+    # 正样本对位置：i<->i+B
+    labels = torch.arange(B, device=z.device)
+    labels = torch.cat([labels + B, labels], dim=0)
+
+    # 遮挡对角线（自己与自己）
+    mask = torch.eye(2 * B, dtype=torch.bool, device=z.device)
+    sim.masked_fill_(mask, -1e9)
+
+    # 计算交叉熵损失
+    loss = F.cross_entropy(sim, labels)
+    return loss

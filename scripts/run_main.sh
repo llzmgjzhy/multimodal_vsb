@@ -21,11 +21,11 @@ python run_main.py \
     --batch_size $batch_size \
     --lr $lr \
     --itr $itr \
-    --d_model 64 \
+    --d_model 128 \
     --dropout 0.1 \
     --patience 20 \
     --phase_level \
     --n_layers 3 \
     --n_heads 4 \
-    --d_ff 128 \
+    --d_ff 256 \
     # --weight_decay 1e-3 \

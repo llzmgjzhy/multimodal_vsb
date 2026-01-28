@@ -1,4 +1,4 @@
-model=prototype_stats
+model=set_transformer
 batch_size=32
 epochs=100
 lr=1e-4
@@ -15,7 +15,7 @@ python run_cluster.py \
     --records_file vsb_$task.xlsx \
     --model_name $model \
     --epochs $epochs \
-    --loss cluster \
+    --loss contrastive \
     --key_metric loss \
     --seed 2025 \
     --batch_size $batch_size \
@@ -25,5 +25,8 @@ python run_cluster.py \
     --dropout 0.1 \
     --patience 20 \
     --phase_level \
+    --n_layers 3 \
+    --n_heads 4 \
+    --d_ff 128 \
 
     # --weight_decay 1e-3 \
