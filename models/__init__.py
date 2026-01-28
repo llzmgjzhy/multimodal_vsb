@@ -10,7 +10,7 @@ from .cnn_mlp.cnn_mlp import PulseEncoder
 from .prototype.prototype import ProtoModelB3,ProtoEnrichMLP
 from .unsupervised_learning.prototype.prototype_stats import DL_SOTA_PrototypeNet
 from .patchtst.patchtst import Model as PatchTST_Model
-from .unsupervised_learning.transformer.transformer import SetEncoderTransformer
+from .unsupervised_learning.transformer.transformer import SetEncoderTransformer, DownStreamClassifier
 
 model_factory = {
     "one_fits_all": gpt4ts,
@@ -26,5 +26,6 @@ model_factory = {
     "prototype_stats": DL_SOTA_PrototypeNet,
     "patchtst": PatchTST_Model,
     "set_transformer": SetEncoderTransformer,
+    "classifier_set_transformer": DownStreamClassifier,
     # Add other models here as needed
 }

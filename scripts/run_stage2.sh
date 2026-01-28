@@ -1,4 +1,4 @@
-model=prototype_simple
+model=classifier_set_transformer
 batch_size=32
 epochs=50
 lr=1e-4
@@ -25,5 +25,8 @@ python run_stage2.py \
     --dropout 0.1 \
     --patience 20 \
     --phase_level \
-    --cluster_dir cluster_vsb_2026-01-22_20-02-52_VBC
+    --n_layers 3 \
+    --n_heads 4 \
+    --d_ff 128 \
+    --cluster_dir cluster_vsb_2026-01-28_17-58-32_tZU
     # --weight_decay 1e-3 \

@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch import Tensor
 import torch.nn.functional as F
+import os
 
 
 class SetEncoderTransformer(nn.Module):
@@ -32,3 +33,20 @@ class SetEncoderTransformer(nn.Module):
         z = self.encoder(x)  # → [B, N, d_model]
         z = z.mean(dim=1)  # 或 self.pool(z.transpose(1,2)).squeeze(-1)
         return z
+
+
+class DownStreamClassifier(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.encoder = SetEncoderTransformer(config)
+        # frozen encoder
+        for param in self.encoder.parameters():
+            param.requires_grad = False
+        self.encoder.eval()
+
+        self.classifier = nn.Linear(config.d_model, 1)
+
+    def forward(self, x):  # [B, N, 30]
+        z = self.encoder(x)  # → [B, d_model]
+        logits = self.classifier(z)  # → [B, num_classes]
+        return logits.squeeze(-1)  # [B]

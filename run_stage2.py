@@ -67,7 +67,7 @@ def main(config):
         # load model
         model_class = model_factory[config.model_name]
         model = model_class(config).to(device)
-        model.stage1_model.load_state_dict(
+        model.encoder.load_state_dict(
             torch.load(
                 os.path.join(
                     "./tensorboard",
