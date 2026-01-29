@@ -67,17 +67,17 @@ def main(config):
         # load model
         model_class = model_factory[config.model_name]
         model = model_class(config).to(device)
-        model.encoder.load_state_dict(
-            torch.load(
-                os.path.join(
-                    "./tensorboard",
-                    config.cluster_dir,
-                    "checkpoints",
-                    f"model_best_fold_{fold_i}.pth",
-                ),
-                weights_only=True,
-            )["state_dict"]
-        )
+        # model.encoder.load_state_dict(
+        #     torch.load(
+        #         os.path.join(
+        #             "./tensorboard",
+        #             config.cluster_dir,
+        #             "checkpoints",
+        #             f"model_best_fold_{fold_i}.pth",
+        #         ),
+        #         weights_only=True,
+        #     )["state_dict"]
+        # )
 
         early_stopping = EarlyStopping(patience=config.patience)
 

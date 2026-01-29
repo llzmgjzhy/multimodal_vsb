@@ -28,10 +28,25 @@ class SetEncoderTransformer(nn.Module):
         # 输出集合级表征
         self.pool = nn.AdaptiveAvgPool1d(1)  # [B, N, D] → [B, D]
 
-    def forward(self, x):  # [B, N, 30]
+        self.seed_vectors = nn.Parameter(torch.randn(1, 6, self.d_model))
+        self.mha = nn.MultiheadAttention(self.d_model, self.nhead, batch_first=True)
+
+        self.proj_head = nn.Sequential(
+            nn.Linear(self.d_model, self.d_model * 2),
+            nn.GELU(),
+            nn.BatchNorm1d(self.d_model * 2),
+            nn.Linear(self.d_model * 2, self.d_model),
+            nn.BatchNorm1d(self.d_model),
+        )
+
+    def forward(self, x, pretrain=True):  # [B, N, 30]
         x = self.token_proj(x)  # → [B, N, d_model]
         z = self.encoder(x)  # → [B, N, d_model]
-        z = z.mean(dim=1)  # 或 self.pool(z.transpose(1,2)).squeeze(-1)
+        seed = self.seed_vectors.expand(z.size(0), -1, -1)  # → [B, k, d_model]
+        z, _ = self.mha(seed, z, z)  # → [B, k, d_model]
+        z = self.pool(z.transpose(1, 2)).squeeze(-1)  # → [B, d_model]
+        if pretrain:
+            z = self.proj_head(z)  # → [B, d_model]
         return z
 
 
@@ -40,13 +55,15 @@ class DownStreamClassifier(nn.Module):
         super().__init__()
         self.encoder = SetEncoderTransformer(config)
         # frozen encoder
-        for param in self.encoder.parameters():
-            param.requires_grad = False
-        self.encoder.eval()
+        # for param in self.encoder.parameters():
+        #     param.requires_grad = False
+        # self.encoder.eval()
 
-        self.classifier = nn.Linear(config.d_model, 1)
+        self.classifier = nn.Sequential(
+            nn.Linear(config.d_model, 64), nn.ReLU(), nn.Dropout(0.1), nn.Linear(64, 1)
+        )
 
     def forward(self, x):  # [B, N, 30]
-        z = self.encoder(x)  # → [B, d_model]
+        z = self.encoder(x, pretrain=False)  # → [B, d_model]
         logits = self.classifier(z)  # → [B, num_classes]
         return logits.squeeze(-1)  # [B]

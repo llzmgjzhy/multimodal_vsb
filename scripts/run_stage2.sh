@@ -1,6 +1,6 @@
 model=classifier_set_transformer
 batch_size=32
-epochs=50
+epochs=10
 lr=1e-4
 itr=1
 task=fault_detection # fault_detection or classification
@@ -28,5 +28,5 @@ python run_stage2.py \
     --n_layers 3 \
     --n_heads 4 \
     --d_ff 128 \
-    --cluster_dir cluster_vsb_2026-01-28_17-58-32_tZU
+    --cluster_dir cluster_vsb_2026-01-29_15-55-59_B5a
     # --weight_decay 1e-3 \
