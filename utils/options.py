@@ -250,7 +250,7 @@ class Options(object):
         )
         self.parser.add_argument(
             "--loss",
-            choices={"cross_entropy", "focal", "mse", "bce", "cluster","contrastive"},
+            type=str,
             default="cross_entropy",
             help="loss used for train model",
         )

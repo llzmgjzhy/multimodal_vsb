@@ -20,7 +20,7 @@ from sklearn.metrics import (
     accuracy_score,
     roc_auc_score,
 )
-from utils.utils import matthews_correlation, eval_mcc, augment_pulse_set_vsb
+from utils.utils import matthews_correlation, eval_mcc, augment_pulse_set_vsb, augment_signal
 
 logger = logging.getLogger("__main__")
 
@@ -373,8 +373,8 @@ class Cluster_Runner(BaseRunner):
 
                 X, targets = batch
                 X = X.float().to(device=self.device)
-                x1, _ = augment_pulse_set_vsb(X)
-                x2, _ = augment_pulse_set_vsb(X)
+                x1, _ = augment_signal(X)
+                x2, _ = augment_signal(X)
 
                 z1 = self.model(x1)
                 z2 = self.model(x2)
@@ -428,8 +428,8 @@ class Cluster_Runner(BaseRunner):
 
                 X, targets = batch
                 X = X.float().to(self.device)
-                x1, _ = augment_pulse_set_vsb(X)
-                x2, _ = augment_pulse_set_vsb(X)
+                x1, _ = augment_signal(X)
+                x2, _ = augment_signal(X)
 
                 z1 = self.model(x1)
                 z2 = self.model(x2)

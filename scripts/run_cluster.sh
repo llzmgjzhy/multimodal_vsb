@@ -1,4 +1,5 @@
-model=set_transformer
+model=swav
+loss=swav
 batch_size=32
 epochs=100
 lr=1e-4
@@ -15,7 +16,7 @@ python run_cluster.py \
     --records_file vsb_$task.xlsx \
     --model_name $model \
     --epochs $epochs \
-    --loss contrastive \
+    --loss $loss \
     --key_metric loss \
     --seed 2025 \
     --batch_size $batch_size \

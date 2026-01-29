@@ -394,3 +394,57 @@ def augment_pulse_set_vsb(
             mask[i] = mask[i, perm]
 
     return x_aug, mask
+
+
+import random
+
+
+def augment_signal(
+    signal,
+    drop_prob=0.3,
+    noise_prob=0.5,
+    shuffle_prob=0.5,
+    drop_fraction=0.1,
+    noise_std=0.1,
+    shuffle_fraction=0.3,
+):
+    """
+    对单个信号样本应用随机增强，返回增强后的新样本。
+    参数:
+        signal: 张量 shape [160, 30], 单个样本的脉冲序列
+        drop_prob: 应用drop token的概率
+        noise_prob: 添加噪声的概率
+        shuffle_prob: 扰乱顺序的概率
+        drop_fraction: 丢弃脉冲的比例 (如0.1表示随机丢弃10%的脉冲)
+        noise_std: 高斯噪声标准差
+        shuffle_fraction: 顺序扰乱的比例 (一次打乱的脉冲片段长度占总长度的比例)
+    返回:
+        augmented: 张量 [160, 30], 增强后的信号
+    """
+    seq_len = signal.shape[0]  # 160
+    augmented = signal.clone()  # 复制一份信号
+
+    # 1. 随机丢弃部分脉冲: 将一定比例的脉冲置零
+    if random.random() < drop_prob:
+        drop_count = int(seq_len * drop_fraction)
+        # 随机选择 drop_count 个脉冲的索引
+        drop_indices = random.sample(range(seq_len), drop_count)
+        augmented[drop_indices] = 0.0  # 将这些脉冲置为0
+
+    # 2. 添加高斯噪声
+    if random.random() < noise_prob:
+        noise = torch.randn_like(augmented) * noise_std
+        augmented = augmented + noise
+
+    # 3. 扰乱部分脉冲顺序
+    if random.random() < shuffle_prob:
+        # 决定扰乱片段的长度
+        seg_len = int(seq_len * shuffle_fraction)
+        if seg_len > 1 and seg_len < seq_len:
+            start = random.randint(0, seq_len - seg_len)
+            # 提取片段并打乱顺序
+            segment = augmented[start : start + seg_len].clone()
+            idx = torch.randperm(seg_len)  # 生成一个随机排列
+            augmented[start : start + seg_len] = segment[idx]
+
+    return augmented, None
