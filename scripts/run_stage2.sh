@@ -1,4 +1,5 @@
-model=classifier_set_transformer
+model=classifier_swav
+cluster_dir=cluster_vsb_2026-01-29_22-34-40_Oz6
 batch_size=32
 epochs=10
 lr=1e-4
@@ -28,5 +29,5 @@ python run_stage2.py \
     --n_layers 3 \
     --n_heads 4 \
     --d_ff 128 \
-    --cluster_dir cluster_vsb_2026-01-29_15-55-59_B5a
+    --cluster_dir $cluster_dir \
     # --weight_decay 1e-3 \

@@ -373,8 +373,8 @@ class Cluster_Runner(BaseRunner):
 
                 X, targets = batch
                 X = X.float().to(device=self.device)
-                x1, _ = augment_signal(X)
-                x2, _ = augment_signal(X)
+                x1 = torch.stack([augment_signal(sig)[0] for sig in X])
+                x2 = torch.stack([augment_signal(sig)[0] for sig in X])
 
                 z1 = self.model(x1)
                 z2 = self.model(x2)
@@ -428,8 +428,8 @@ class Cluster_Runner(BaseRunner):
 
                 X, targets = batch
                 X = X.float().to(self.device)
-                x1, _ = augment_signal(X)
-                x2, _ = augment_signal(X)
+                x1 = torch.stack([augment_signal(sig)[0] for sig in X])
+                x2 = torch.stack([augment_signal(sig)[0] for sig in X])
 
                 z1 = self.model(x1)
                 z2 = self.model(x2)

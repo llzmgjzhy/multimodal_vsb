@@ -120,3 +120,28 @@ class SwAVModel(nn.Module):
         z = F.normalize(z, dim=1, p=2)  # 单位化特征向量
         scores = self.prototypes(z)  # 原型分数 [B, num_prototypes]
         return scores
+
+
+class ClassifySwAVModel(nn.Module):
+    def __init__(self, config):
+        super(ClassifySwAVModel, self).__init__()
+
+        self.num_prototypes = 100
+        self.embed_dim = config.d_model
+        self.hidden_dim = config.d_ff
+        self.proj_out_dim = config.d_model
+        self.encoder = SwAVModel(config)
+        self.encoder_model = self.encoder.encoder
+
+        self.classifier = nn.Sequential(
+            nn.Linear(self.embed_dim, self.hidden_dim),
+            nn.ReLU(),
+            nn.LayerNorm(self.hidden_dim),
+            nn.Linear(self.hidden_dim, 1),  # 二分类输出 logit
+        )
+
+    def forward(self, x):
+        # 顺序: 编码器 -> 投影 -> 特征归一化 -> 原型匹配分数
+        h = self.encoder_model(x)  # 编码器输出 [B, embed_dim]
+        logits = self.classifier(h)  # 分类器输出 [B, 1]
+        return logits.squeeze(1)  # 返回形状 [B]

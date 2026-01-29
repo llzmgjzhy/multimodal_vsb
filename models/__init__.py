@@ -11,7 +11,7 @@ from .prototype.prototype import ProtoModelB3,ProtoEnrichMLP
 from .unsupervised_learning.prototype.prototype_stats import DL_SOTA_PrototypeNet
 from .patchtst.patchtst import Model as PatchTST_Model
 from .unsupervised_learning.transformer.transformer import SetEncoderTransformer, DownStreamClassifier
-from .unsupervised_learning.swav.swav import SwAVModel
+from .unsupervised_learning.swav.swav import SwAVModel,ClassifySwAVModel
 
 model_factory = {
     "one_fits_all": gpt4ts,
@@ -29,5 +29,6 @@ model_factory = {
     "set_transformer": SetEncoderTransformer,
     "classifier_set_transformer": DownStreamClassifier,
     "swav": SwAVModel,
+    "classifier_swav": ClassifySwAVModel,
     # Add other models here as needed
 }
