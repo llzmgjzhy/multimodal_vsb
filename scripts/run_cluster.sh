@@ -1,6 +1,6 @@
 model=swav
 loss=swav
-batch_size=32
+batch_size=64
 epochs=100
 lr=1e-4
 itr=1

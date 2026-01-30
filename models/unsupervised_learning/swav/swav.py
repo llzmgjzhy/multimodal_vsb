@@ -91,7 +91,7 @@ class SwAVModel(nn.Module):
     def __init__(self, config):
         super(SwAVModel, self).__init__()
 
-        self.num_prototypes = 100
+        self.num_prototypes = 50
         self.embed_dim = config.d_model
         self.hidden_dim = config.d_ff
         self.proj_out_dim = config.d_model

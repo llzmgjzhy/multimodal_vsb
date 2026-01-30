@@ -1,6 +1,6 @@
 model=classifier_swav
-cluster_dir=cluster_vsb_2026-01-29_22-34-40_Oz6
-batch_size=32
+cluster_dir=cluster_vsb_2026-01-30_13-51-04_1MP
+batch_size=64
 epochs=10
 lr=1e-4
 itr=1
