@@ -195,6 +195,10 @@ class Options(object):
             help="Model class",
         )
         self.parser.add_argument(
+            "--model_pretrain",
+            help="Pretrained model name",
+        )
+        self.parser.add_argument(
             "--d_model",
             type=int,
             default=768,

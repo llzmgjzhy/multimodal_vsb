@@ -12,6 +12,7 @@ from .unsupervised_learning.prototype.prototype_stats import DL_SOTA_PrototypeNe
 from .patchtst.patchtst import Model as PatchTST_Model
 from .unsupervised_learning.transformer.transformer import SetEncoderTransformer, DownStreamClassifier
 from .unsupervised_learning.swav.swav import SwAVModel,ClassifySwAVModel
+from .swintransformer.swintransformer import DualImageSwinClassifier
 
 model_factory = {
     "one_fits_all": gpt4ts,
@@ -30,5 +31,6 @@ model_factory = {
     "classifier_set_transformer": DownStreamClassifier,
     "swav": SwAVModel,
     "classifier_swav": ClassifySwAVModel,
+    "swin_transformer": DualImageSwinClassifier,
     # Add other models here as needed
 }

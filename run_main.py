@@ -44,8 +44,10 @@ def main(config):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Build data indices
+    meta_data_train = pd.read_csv(
+        os.path.join(config.root_path, "VSBdata", "metadata_train.csv")
+    )
     config.data_path = os.path.join(config.root_path, config.data_path)
-    meta_data_train = pd.read_csv(os.path.join(config.data_path, "metadata_train.csv"))
     query_id = "signal_id" if config.phase_level else "id_measurement"
     positive_ids = set(meta_data_train.loc[meta_data_train["target"] == 1, query_id])
     signals_ids = meta_data_train[query_id].unique()
@@ -192,7 +194,8 @@ def main(config):
         # test
         model.load_state_dict(
             torch.load(
-                os.path.join(config.save_dir, f"model_best_fold_{fold_i}.pth"), weights_only=True
+                os.path.join(config.save_dir, f"model_best_fold_{fold_i}.pth"),
+                weights_only=True,
             )["state_dict"]
         )
         aggr_metrics_test = test(

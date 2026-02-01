@@ -20,7 +20,13 @@ from sklearn.metrics import (
     accuracy_score,
     roc_auc_score,
 )
-from utils.utils import matthews_correlation, eval_mcc, augment_pulse_set_vsb, augment_signal
+from utils.utils import (
+    matthews_correlation,
+    eval_mcc,
+    augment_pulse_set_vsb,
+    augment_signal,
+)
+from transformers import AutoImageProcessor
 
 logger = logging.getLogger("__main__")
 
@@ -162,7 +168,11 @@ class Anomaly_Detection_Runner(BaseRunner):
                 self.optimizer.zero_grad()
 
                 X, targets = batch
-                X = X.float().to(device=self.device)
+                if isinstance(X, (tuple, list)):
+                    X = tuple(x.float().to(self.device) for x in X)
+
+                else:
+                    X = X.float().to(self.device)
                 targets = targets.float().to(device=self.device)
                 outputs = self.model(X)
 
@@ -214,7 +224,11 @@ class Anomaly_Detection_Runner(BaseRunner):
             for i, batch in enumerate(self.dataloader):
 
                 X, targets = batch
-                X = X.float().to(self.device)
+                if isinstance(X, (tuple, list)):
+                    X = tuple(x.float().to(self.device) for x in X)
+
+                else:
+                    X = X.float().to(self.device)
                 targets = targets.float().to(device=self.device)
                 outputs = self.model(X)
 
@@ -293,7 +307,11 @@ class Anomaly_Detection_Runner(BaseRunner):
             for i, batch in enumerate(self.dataloader):
 
                 X, targets = batch
-                X = X.float().to(self.device)
+                if isinstance(X, (tuple, list)):
+                    X = tuple(x.float().to(self.device) for x in X)
+
+                else:
+                    X = X.float().to(self.device)
                 targets = targets.float().to(device=self.device)
                 outputs = self.model(X)
 
