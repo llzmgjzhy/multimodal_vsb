@@ -167,7 +167,7 @@ class Anomaly_Detection_Runner(BaseRunner):
             for i, batch in enumerate(self.dataloader):
                 self.optimizer.zero_grad()
 
-                X, targets = batch
+                X, targets, sample_ids = batch
                 if isinstance(X, (tuple, list)):
                     X = tuple(x.float().to(self.device) for x in X)
 
@@ -217,13 +217,14 @@ class Anomaly_Detection_Runner(BaseRunner):
             "target_masks": [],
             "targets": [],
             "outputs": [],
+            "sample_ids": [],
             "metrics": [],
         }
 
         try:
             for i, batch in enumerate(self.dataloader):
 
-                X, targets = batch
+                X, targets, sample_ids = batch
                 if isinstance(X, (tuple, list)):
                     X = tuple(x.float().to(self.device) for x in X)
 
@@ -239,6 +240,11 @@ class Anomaly_Detection_Runner(BaseRunner):
 
                 per_batch["targets"].append(targets.half().cpu().numpy())
                 per_batch["outputs"].append(outputs.half().cpu().numpy())
+                per_batch["sample_ids"].append(
+                    sample_ids.detach().cpu().numpy()
+                    if torch.is_tensor(sample_ids)
+                    else np.asarray(sample_ids)
+                )
                 per_batch["metrics"].append([loss.half().cpu().numpy()])
 
                 metrics = {
@@ -300,13 +306,14 @@ class Anomaly_Detection_Runner(BaseRunner):
             "target_masks": [],
             "targets": [],
             "outputs": [],
+            "sample_ids": [],
             "metrics": [],
         }
 
         try:
             for i, batch in enumerate(self.dataloader):
 
-                X, targets = batch
+                X, targets, sample_ids = batch
                 if isinstance(X, (tuple, list)):
                     X = tuple(x.float().to(self.device) for x in X)
 
@@ -322,6 +329,11 @@ class Anomaly_Detection_Runner(BaseRunner):
 
                 per_batch["targets"].append(targets.half().cpu().numpy())
                 per_batch["outputs"].append(outputs.half().cpu().numpy())
+                per_batch["sample_ids"].append(
+                    sample_ids.detach().cpu().numpy()
+                    if torch.is_tensor(sample_ids)
+                    else np.asarray(sample_ids)
+                )
                 per_batch["metrics"].append([loss.half().cpu().numpy()])
 
                 metrics = {
@@ -671,11 +683,13 @@ def validate(
             np.concatenate(per_batch["outputs"], axis=0)
         )  # [N, 2]
         test_labels = np.concatenate(per_batch["targets"], axis=0).reshape(-1)
+        sample_ids_arr = np.concatenate(per_batch["sample_ids"], axis=0).reshape(-1)
 
         df = pd.DataFrame(
             {
                 "pred": logits,
                 "targets": test_labels,
+                "sample_id": sample_ids_arr,
             }
         )
         df.to_csv(os.path.join(config.pred_dir, f"val_pred_{fold_i}.csv"), index=False)
@@ -734,11 +748,13 @@ def test(test_evaluator, val_evaluator, config, fold_i=0):
     # save per-batch predictions
     logits = torch.from_numpy(np.concatenate(per_batch["outputs"], axis=0))  # [N, 2]
     test_labels = np.concatenate(per_batch["targets"], axis=0).reshape(-1)
+    sample_ids_arr = np.concatenate(per_batch["sample_ids"], axis=0).reshape(-1)
 
     df = pd.DataFrame(
         {
             "pred": logits,
             "targets": test_labels,
+            "sample_id": sample_ids_arr,
         }
     )
     df.to_csv(os.path.join(config.pred_dir, f"test_pred_{fold_i}.csv"), index=False)

@@ -1,7 +1,7 @@
 model=swin_transformer
 model_pretrain="microsoft/swin-tiny-patch4-window7-224"
 batch_size=32
-epochs=20
+epochs=2
 lr=1e-4
 itr=1
 task=fault_detection # fault_detection or classification
@@ -26,5 +26,5 @@ python run_main.py \
     --d_model 128 \
     --dropout 0.1 \
     --patience 5 \
-    --phase_level \
+    # --phase_level \
     # --weight_decay 1e-3 \

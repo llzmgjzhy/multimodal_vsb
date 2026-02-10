@@ -301,54 +301,279 @@ def register_test_record(
     logger.info("Exported performance record to '{}'".format(filepath))
 
 
+# def itr_test_result(config):
+#     """
+#     Calculate one iteration's test result for anomaly detection.
+#     """
+
+#     def load_fold_results(prefix):
+#         probs, labels = [], []
+#         for i in range(config.split_num):
+#             path = os.path.join(config.pred_dir, f"{prefix}_pred_{i}.csv")
+#             df = pd.read_csv(path)
+#             probs.extend(df["pred"].values)
+#             labels.extend(df["targets"].values)
+#         return np.array(probs), np.array(labels)
+
+#     all_val_probs, all_val_labels = load_fold_results("val")
+#     all_test_probs, all_test_labels = load_fold_results("test")
+
+#     # get the best threshold
+#     best_threshold, best_val_mcc, _ = eval_mcc(all_val_labels, all_val_probs)
+#     logger.info(f"Best threshold: {best_threshold}, Best val MCC: {best_val_mcc:.4f}")
+
+#     # get the test mcc
+#     all_test_pred = (all_test_probs > best_threshold).astype(int)
+#     test_mcc = matthews_correlation(all_test_labels, all_test_pred).item()
+#     test_accuracy = accuracy_score(all_test_labels, all_test_pred)
+#     precision, recall, f_score, support = precision_recall_fscore_support(
+#         all_test_labels, all_test_pred, average="binary"
+#     )
+#     test_auc = roc_auc_score(all_test_labels, all_test_probs)
+
+#     logger.info(f"Test MCC: {test_mcc:.4f}")
+
+#     result = {
+#         "best_threshold": best_threshold,
+#         "best_val_mcc": best_val_mcc,
+#         "test_mcc": test_mcc,
+#         "test_accuracy": test_accuracy,
+#         "test_precision": precision,
+#         "test_recall": recall,
+#         "test_f_score": f_score,
+#         "test_auc": test_auc,
+#     }
+
+#     # save csv with test results
+#     test_results_df = pd.DataFrame([result])
+#     test_results_df.to_csv(
+#         os.path.join(config.pred_dir, "test_results.csv"), index=False
+#     )
+
+#     return result
+
+
 def itr_test_result(config):
     """
     Calculate one iteration's test result for anomaly detection.
+
+    New features:
+    - Per-fold: find best threshold on that fold's val set, then evaluate on that fold's test set.
+    - Save per-fold thresholds and metrics.
+    - Keep previous global-merged functionality.
     """
 
-    def load_fold_results(prefix):
-        probs, labels = [], []
+    def load_one_fold(prefix: str, fold_idx: int):
+        path = os.path.join(config.pred_dir, f"{prefix}_pred_{fold_idx}.csv")
+        df = pd.read_csv(path)
+
+        # safety checks
+        if "pred" not in df.columns or "targets" not in df.columns:
+            raise ValueError(
+                f"Missing required columns in {path}. "
+                f"Found columns: {list(df.columns)}; required: ['pred','targets']"
+            )
+
+        probs = df["pred"].values.astype(float)
+        labels = df["targets"].values.astype(int)
+        sample_ids = df["sample_id"].values.astype(int)
+        return probs, labels, sample_ids
+
+    def load_all_folds(prefix: str):
+        probs_all, labels_all, sample_ids_all = [], [], []
         for i in range(config.split_num):
-            path = os.path.join(config.pred_dir, f"{prefix}_pred_{i}.csv")
-            df = pd.read_csv(path)
-            probs.extend(df["pred"].values)
-            labels.extend(df["targets"].values)
-        return np.array(probs), np.array(labels)
+            probs, labels, sample_ids = load_one_fold(prefix, i)
+            probs_all.append(probs)
+            labels_all.append(labels)
+            sample_ids_all.append(sample_ids)
+        return (
+            np.concatenate(probs_all),
+            np.concatenate(labels_all),
+            np.concatenate(sample_ids_all),
+        )
 
-    all_val_probs, all_val_labels = load_fold_results("val")
-    all_test_probs, all_test_labels = load_fold_results("test")
+    def compute_metrics(y_true: np.ndarray, probs: np.ndarray, threshold: float):
+        y_pred = (probs > threshold).astype(int)
 
-    # get the best threshold
-    best_threshold, best_val_mcc, _ = eval_mcc(all_val_labels, all_val_probs)
-    logger.info(f"Best threshold: {best_threshold}, Best val MCC: {best_val_mcc:.4f}")
+        mcc = matthews_correlation(y_true, y_pred).item()
+        acc = accuracy_score(y_true, y_pred)
 
-    # get the test mcc
-    all_test_pred = (all_test_probs > best_threshold).astype(int)
-    test_mcc = matthews_correlation(all_test_labels, all_test_pred).item()
-    test_accuracy = accuracy_score(all_test_labels, all_test_pred)
-    precision, recall, f_score, support = precision_recall_fscore_support(
-        all_test_labels, all_test_pred, average="binary"
+        precision, recall, f_score, _ = precision_recall_fscore_support(
+            y_true, y_pred, average="binary", zero_division=0
+        )
+
+        # AUC requires both classes present; otherwise sklearn raises.
+        try:
+            auc = roc_auc_score(y_true, probs)
+        except ValueError:
+            auc = np.nan
+
+        return {
+            "mcc": mcc,
+            "accuracy": acc,
+            "precision": precision,
+            "recall": recall,
+            "f_score": f_score,
+            "auc": auc,
+        }
+
+    def _build_merged_df(meta_data_train, sample_ids, preds):
+        id_meas = meta_data_train["id_measurement"].drop_duplicates().to_numpy()
+        id_meas_sample = id_meas[sample_ids]
+        yp_df = pd.DataFrame(
+            {
+                "id_measurement": id_meas_sample.astype(int),
+                "prediction": np.asarray(preds, dtype=float).reshape(-1),
+            }
+        )
+
+        expanded = meta_data_train[["id_measurement", "signal_id", "target"]].copy()
+        expanded["id_measurement"] = expanded["id_measurement"].astype(int)
+
+        merged_df = expanded.merge(yp_df, on="id_measurement", how="inner")
+        return merged_df
+
+    # -------------------------
+    # 1) Per-fold evaluation
+    # -------------------------
+    fold_rows = []
+    for fold in range(config.split_num):
+        val_probs, val_labels, _ = load_one_fold("val", fold)
+        test_probs, test_labels, _ = load_one_fold("test", fold)
+
+        # Find best threshold on THIS fold's val set
+        best_th, best_val_mcc, _ = eval_mcc(val_labels, val_probs)
+
+        # Evaluate test with this fold-specific threshold
+        test_metrics = compute_metrics(test_labels, test_probs, best_th)
+
+        fold_rows.append(
+            {
+                "fold": fold,
+                "best_threshold": float(best_th),
+                "best_val_mcc": float(best_val_mcc),
+                "test_mcc": float(test_metrics["mcc"]),
+                "test_accuracy": float(test_metrics["accuracy"]),
+                "test_precision": float(test_metrics["precision"]),
+                "test_recall": float(test_metrics["recall"]),
+                "test_f_score": float(test_metrics["f_score"]),
+                "test_auc": (
+                    float(test_metrics["auc"])
+                    if not np.isnan(test_metrics["auc"])
+                    else np.nan
+                ),
+                "val_size": int(len(val_labels)),
+                "test_size": int(len(test_labels)),
+                "val_pos_rate": float(np.mean(val_labels)),
+                "test_pos_rate": float(np.mean(test_labels)),
+            }
+        )
+
+    fold_df = pd.DataFrame(fold_rows)
+
+    # summary across folds (mean + std)
+    per_fold_test_mcc_mean = float(fold_df["test_mcc"].mean())
+    per_fold_test_mcc_std = (
+        float(fold_df["test_mcc"].std(ddof=1)) if len(fold_df) > 1 else 0.0
     )
-    test_auc = roc_auc_score(all_test_labels, all_test_probs)
 
-    logger.info(f"Test MCC: {test_mcc:.4f}")
+    per_fold_threshold_mean = float(fold_df["best_threshold"].mean())
+    per_fold_threshold_std = (
+        float(fold_df["best_threshold"].std(ddof=1)) if len(fold_df) > 1 else 0.0
+    )
+
+    # Save per-fold details
+    fold_path = os.path.join(config.pred_dir, "fold_results.csv")
+    fold_df.to_csv(fold_path, index=False)
+
+    # -------------------------
+    # 2) Global merged evaluation (measurment-level)
+    # -------------------------
+    all_val_probs_meas, all_val_labels, all_val_sample_ids = load_all_folds("val")
+    all_test_probs_meas, all_test_labels, all_test_sample_ids = load_all_folds("test")
+
+    global_best_th_meas, global_best_val_mcc_meas, _ = eval_mcc(
+        all_val_labels, all_val_probs_meas
+    )
+
+    global_test_metrics_meas = compute_metrics(
+        all_test_labels, all_test_probs_meas, global_best_th_meas
+    )
+
+    # -------------------------
+    # 3) Global merged evaluation (signal-level)
+    # -------------------------
+    meta_data_train = pd.read_csv(
+        os.path.join(config.root_path, "VSBdata", "metadata_train.csv")
+    )
+    val_exp = _build_merged_df(meta_data_train, all_val_sample_ids, all_val_probs_meas)
+    test_exp = _build_merged_df(
+        meta_data_train, all_test_sample_ids, all_test_probs_meas
+    )
+    global_best_th_exp, global_best_val_mcc_exp, _ = eval_mcc(
+        val_exp["target"].values.astype(float),  # signal-level y
+        val_exp["prediction"].values.astype(float),  # broadcasted measurement score
+    )
+    global_exp_test_pred = (
+        test_exp["prediction"].values.astype(float) > global_best_th_exp
+    ).astype(int)
+    global_exp_test_mcc = matthews_correlation(
+        test_exp["target"].values.astype(int), global_exp_test_pred
+    ).item()
+
+    # -------------------------
+    # 4) Logging + save summary
+    # -------------------------
+    logger.info(
+        f"[Per-fold] test MCC mean±std: {per_fold_test_mcc_mean:.4f} ± {per_fold_test_mcc_std:.4f} | "
+        f"threshold mean±std: {per_fold_threshold_mean:.6f} ± {per_fold_threshold_std:.6f}"
+    )
+    logger.info(
+        f"[Global] Best threshold (measurement): {global_best_th_meas:.6f}, Best val MCC (measurement): {global_best_val_mcc_meas:.4f}, "
+        f"Test MCC (measurement): {global_test_metrics_meas['mcc']:.4f}"
+    )
+    logger.info(
+        f"[Global] Best threshold: {global_best_th_exp:.6f}, "
+        f"Best val MCC: {global_best_val_mcc_exp:.4f}, "
+        f"Test MCC: {global_exp_test_mcc:.4f}"
+    )
+    logger.info(f"Per-fold details saved to: {fold_path}")
 
     result = {
-        "best_threshold": best_threshold,
-        "best_val_mcc": best_val_mcc,
-        "test_mcc": test_mcc,
-        "test_accuracy": test_accuracy,
-        "test_precision": precision,
-        "test_recall": recall,
-        "test_f_score": f_score,
-        "test_auc": test_auc,
+        # ---- global (measurement) ----
+        "global_best_threshold (measurement)": float(global_best_th_meas),
+        "global_best_val_mcc (measurement)": float(global_best_val_mcc_meas),
+        "global_test_mcc (measurement)": float(global_test_metrics_meas["mcc"]),
+        "global_test_accuracy (measurement)": float(
+            global_test_metrics_meas["accuracy"]
+        ),
+        "global_test_precision (measurement)": float(
+            global_test_metrics_meas["precision"]
+        ),
+        "global_test_recall (measurement)": float(global_test_metrics_meas["recall"]),
+        "global_test_f_score (measurement)": float(global_test_metrics_meas["f_score"]),
+        "global_test_auc (measurement)": (
+            float(global_test_metrics_meas["auc"])
+            if not np.isnan(global_test_metrics_meas["auc"])
+            else np.nan
+        ),
+        # ---- global (signal-level) ----
+        "global_best_threshold": float(global_best_th_exp),
+        "global_best_val_mcc": float(global_best_val_mcc_exp),
+        "global_exp_test_mcc": float(global_exp_test_mcc),
+        # ---- per-fold summary ----
+        "per_fold_test_mcc_mean": per_fold_test_mcc_mean,
+        "per_fold_test_mcc_std": per_fold_test_mcc_std,
+        "per_fold_threshold_mean": per_fold_threshold_mean,
+        "per_fold_threshold_std": per_fold_threshold_std,
+        "num_folds": int(config.split_num),
+        "fold_results_path": fold_path,
     }
 
-    # save csv with test results
-    test_results_df = pd.DataFrame([result])
-    test_results_df.to_csv(
-        os.path.join(config.pred_dir, "test_results.csv"), index=False
-    )
+    # Save summary CSV (single row)
+    summary_path = os.path.join(config.pred_dir, "test_results.csv")
+    pd.DataFrame([result]).to_csv(summary_path, index=False)
+    logger.info(f"Summary saved to: {summary_path}")
 
     return result
 

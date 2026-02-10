@@ -31,6 +31,7 @@ class VSBTrainDataset(Dataset):
         #     os.path.join(self.img_path, f"signals_{self.signal_ids[index]}.npy")
         # ).astype(np.float32)
         # signal = np.transpose(signal, (1, 0))  # [800000, 3]
+        sample_id = self.signal_ids[index]
         if self.phase_level:
             signal = self.data[
                 self.signal_ids[index]
@@ -46,7 +47,7 @@ class VSBTrainDataset(Dataset):
             signal = self.data[start_idx:end_idx]  # 形状：[3, 160, 30]
 
         label = self.labels[index]
-        return (signal, label)
+        return (signal, label, sample_id)
 
     def __len__(self):
         return len(self.signal_ids)
@@ -83,16 +84,39 @@ class VSBImageDataset(Dataset):
             raise FileNotFoundError(f"overlay dir not found: {self.over_dir}")
 
     def __getitem__(self, index):
-        sid = int(self.signal_ids[index])
-        label = float(self.labels[index])
+        sample_id = self.signal_ids[index]
+        if self.phase_level:
+            sid = int(self.signal_ids[index])
+            label = float(self.labels[index])
 
-        # 你的命名是 000123.png 这种
-        fname = f"{sid:06d}.png"
-        img_heat = Image.open(self.heat_dir / fname).convert("RGB")
-        img_over = Image.open(self.over_dir / fname).convert("RGB")
+            # 你的命名是 000123.png 这种
+            fname = f"{sid:06d}.png"
+            img_heat = Image.open(self.heat_dir / fname).convert("RGB")
+            img_over = Image.open(self.over_dir / fname).convert("RGB")
+        else:
+            # signal_id 是 measurement 级别的，命名是 000123_0.png, 000123_1.png, 000123_2.png
+            mid = int(self.signal_ids[index])
+            label = float(self.labels[index])
+
+            img_heat_list = []
+            img_over_list = []
+            for chunk_i in range(3):
+                frame_id = mid * 3 + chunk_i
+                fname = f"{frame_id:06d}.png"
+                img_heat_list.append(
+                    Image.open(self.heat_dir / fname).convert("RGB")
+                )  # PIL Image
+                img_over_list.append(
+                    Image.open(self.over_dir / fname).convert("RGB")
+                )  # PIL Image
+
+            # 将三张图拼接成一张大图，或者你也可以返回一个 list，让 dataloader 的 collate_fn 来处理
+            # 这里我们简单地返回一个 list，collate_fn 会把它们堆叠成一个 batch
+            img_heat = img_heat_list  # list of 3 PIL Images
+            img_over = img_over_list  # list of 3 PIL Images
 
         # 注意：这里返回的是 PIL Image
-        return (img_heat, img_over), label
+        return (img_heat, img_over), label, sample_id
 
     def __len__(self):
         return len(self.signal_ids)
@@ -103,11 +127,28 @@ class VSBImageCollator:
         self.image_processor = image_processor
 
     def __call__(self, batch):
+        # default measurement-level batch: list of ((pil_heat, pil_over), label, sample_id)
+
         # batch: [((pil_heat, pil_over), label), ...]
         heats = [b[0][0] for b in batch]  # list of PIL
         overs = [b[0][1] for b in batch]  # list of PIL
-        labels = torch.tensor([b[1] for b in batch], dtype=torch.float32)
+        B = len(batch)
+        K = len(heats[0])  # should be 3
+        labels = torch.tensor([b[1] for b in batch], dtype=torch.long)
+        sample_ids = torch.tensor([b[2] for b in batch], dtype=torch.long)
 
-        x_heat = self.image_processor(images=heats, return_tensors="pt")["pixel_values"]
-        x_over = self.image_processor(images=overs, return_tensors="pt")["pixel_values"]
-        return (x_heat, x_over), labels
+        # flatten to (B*K) PILs for processor
+        heat_flat = [img for bag in heats for img in bag]
+        over_flat = [img for bag in overs for img in bag]
+
+        x_heat = self.image_processor(images=heat_flat, return_tensors="pt")[
+            "pixel_values"
+        ]
+        x_over = self.image_processor(images=over_flat, return_tensors="pt")[
+            "pixel_values"
+        ]
+        # reshape to [B,K,C,H,W]
+        # x_* is [B*K, C, H, W]
+        x_heat = x_heat.view(B, K, *x_heat.shape[1:])
+        x_over = x_over.view(B, K, *x_over.shape[1:])
+        return (x_heat, x_over), labels, sample_ids
