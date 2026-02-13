@@ -525,8 +525,8 @@ def itr_test_result(config):
     # 4) Logging + save summary
     # -------------------------
     logger.info(
-        f"[Per-fold] test MCC mean±std: {per_fold_test_mcc_mean:.4f} ± {per_fold_test_mcc_std:.4f} | "
-        f"threshold mean±std: {per_fold_threshold_mean:.6f} ± {per_fold_threshold_std:.6f}"
+        f"[Per-fold] test MCC mean +/- std: {per_fold_test_mcc_mean:.4f} +/- {per_fold_test_mcc_std:.4f} | "
+        f"threshold mean +/- std: {per_fold_threshold_mean:.6f} +/- {per_fold_threshold_std:.6f}"
     )
     logger.info(
         f"[Global] Best threshold (measurement): {global_best_th_meas:.6f}, Best val MCC (measurement): {global_best_val_mcc_meas:.4f}, "
@@ -537,7 +537,7 @@ def itr_test_result(config):
         f"Best val MCC: {global_best_val_mcc_exp:.4f}, "
         f"Test MCC: {global_exp_test_mcc:.4f}"
     )
-    logger.info(f"Per-fold details saved to: {fold_path}")
+    # logger.info(f"Per-fold details saved to: {fold_path}")
 
     result = {
         # ---- global (measurement) ----
@@ -573,7 +573,7 @@ def itr_test_result(config):
     # Save summary CSV (single row)
     summary_path = os.path.join(config.pred_dir, "test_results.csv")
     pd.DataFrame([result]).to_csv(summary_path, index=False)
-    logger.info(f"Summary saved to: {summary_path}")
+    # logger.info(f"Summary saved to: {summary_path}")
 
     return result
 
