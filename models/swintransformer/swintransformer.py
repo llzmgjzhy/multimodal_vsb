@@ -1,4 +1,4 @@
-from transformers import SwinModel
+from transformers import SwinModel, Swinv2Model
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -9,7 +9,7 @@ class SwinFeatureExtractor(nn.Module):
         self, model_name="microsoft/swin-tiny-patch4-window7-224", pretrained=True
     ):
         super().__init__()
-        self.backbone = SwinModel.from_pretrained(model_name)
+        self.backbone = Swinv2Model.from_pretrained(model_name)
         self.hidden = self.backbone.config.hidden_size  # 768 for tiny
         # SwinModel 输出 last_hidden_state: [B, num_patches, hidden]
         # 我们做 mean pooling 得到 [B, hidden]

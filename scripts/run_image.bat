@@ -14,7 +14,7 @@ REM =========================
 REM 参数设置
 REM =========================
 set model=swin_transformer
-set model_pretrain=microsoft/swin-tiny-patch4-window7-224
+set model_pretrain=microsoft/swinv2-tiny-patch4-window8-256
 set batch_size=16
 set epochs=10
 set lr=1e-5
