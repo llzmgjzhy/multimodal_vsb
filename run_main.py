@@ -30,6 +30,11 @@ def main(config):
     total_start_time = time.time()
 
     # add file logging besides stdout
+    logging.basicConfig(
+        format="%(asctime)s | %(levelname)s : %(message)s", level=logging.INFO
+    )
+    logger = logging.getLogger(__name__)
+    logger.info("Loading packages ...")
     file_handler = logging.FileHandler(os.path.join(config.output_dir, "output.log"))
     logger.addHandler(file_handler)
 
@@ -251,14 +256,14 @@ def main(config):
         )
     )
 
+    # remove file handler to prevent duplicate logging in next iteration
+    logger.removeHandler(file_handler)
+    file_handler.close()
+    # remove tensorboard writer to prevent duplicate logging in next iteration
+    tensorboard_writer.close()
+
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        format="%(asctime)s | %(levelname)s : %(message)s", level=logging.INFO
-    )
-    logger = logging.getLogger(__name__)
-    logger.info("Loading packages ...")
-
     args = Options().parse()  # `argparse` object
     origin_comment = args.comment
     for ii in range(args.itr):

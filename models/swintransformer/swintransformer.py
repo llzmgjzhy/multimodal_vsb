@@ -114,7 +114,7 @@ class DualImageSwinClassifier(nn.Module):
         bag_feat = inst_feat.reshape(B, K, self.encoder.hidden)
 
         # 5) MIL pooling: [B, D]
-        z = self.mil(bag_feat)  # [B, D]
+        z = bag_feat.mean(dim=1)  # [B, D]
 
         # 6) classifier: [B]
         logit = self.head(z).squeeze(-1)
