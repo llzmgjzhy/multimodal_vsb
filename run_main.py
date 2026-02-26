@@ -79,17 +79,31 @@ def main(config):
 
         # initialize the optimizer
         optim_class = get_optimizer(config.optimizer)
+        # optimizer = optim_class(
+        #     model.parameters(), lr=config.lr, weight_decay=config.weight_decay
+        # )
+
+        # group parameters and set different learning rates if needed
+        backbone_params = list(model.encoder.parameters())
+        backbone_param_ids = set(id(p) for p in backbone_params)
+        other_params = [
+            p for p in model.parameters() if id(p) not in backbone_param_ids
+        ]
         optimizer = optim_class(
-            model.parameters(), lr=config.lr, weight_decay=config.weight_decay
+            [
+                {"params": backbone_params, "lr": config.backbone_lr},
+                {"params": other_params, "lr": config.head_lr},
+            ],
+            weight_decay=config.weight_decay,
         )
 
         # loss criterion
         loss_module = get_loss_module(config)
 
         # initialize the scheduler
-        # scheduler = lr_scheduler.CosineAnnealingLR(
-        #     optimizer, T_max=config.epochs, eta_min=1e-8
-        # )
+        scheduler = lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=config.epochs, eta_min=1e-8
+        )
 
         # initialize runner, responsible for training, validation and testing
         runner_class = pipeline_factory(config)
@@ -193,7 +207,7 @@ def main(config):
                     logger.info("Early stopping")
                     break
 
-            # scheduler.step()
+            scheduler.step()
             print("lr = {:.10f}".format(optimizer.param_groups[0]["lr"]))
 
         # test

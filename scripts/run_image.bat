@@ -40,6 +40,8 @@ python run_main.py ^
     --seed 2025 ^
     --batch_size %batch_size% ^
     --lr %lr% ^
+    --backbone_lr 5e-6 ^
+    --head_lr 5e-5 ^
     --itr %itr% ^
     --d_model 128 ^
     --dropout 0.1 ^

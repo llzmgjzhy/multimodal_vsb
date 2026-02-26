@@ -20,35 +20,6 @@ class SwinFeatureExtractor(nn.Module):
         return feat
 
 
-class GatedAttnMIL(nn.Module):
-    """
-    Gated Attention MIL pooling.
-    x: [B, K, D]
-    returns:
-      z: [B, D]
-      attn: [B, K]
-    """
-
-    def __init__(self, d_model: int, attn_dropout: float = 0.0):
-        super().__init__()
-        self.v = nn.Linear(d_model, d_model)
-        self.u = nn.Linear(d_model, d_model)
-        self.w = nn.Linear(d_model, 1)
-        self.attn_dropout = (
-            nn.Dropout(attn_dropout) if attn_dropout > 0 else nn.Identity()
-        )
-
-    def forward(self, x):
-        # a: [B, K]
-        a = self.w(torch.tanh(self.v(x)) * torch.sigmoid(self.u(x))).squeeze(-1)
-        attn = F.softmax(a, dim=1)  # [B, K]
-        attn = self.attn_dropout(attn)
-
-        # z: [B, D]
-        z = torch.sum(attn.unsqueeze(-1) * x, dim=1)
-        return z
-
-
 class DualImageSwinClassifier(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -73,23 +44,8 @@ class DualImageSwinClassifier(nn.Module):
             for p in self.encoder.parameters():
                 p.requires_grad = False
 
-        self.mil = GatedAttnMIL(
-            self.encoder.hidden, attn_dropout=0.1
-        )  # simple MIL pooling: mean over instances
-
         in_dim = self.encoder.hidden  # heat + overlay concat
-        # in_dim = self.encoder.hidden
-        # self.head = nn.Sequential(
-        #     nn.Linear(in_dim, 256),
-        #     nn.GELU(),
-        #     nn.LayerNorm(256),
-        #     nn.Dropout(0.2),
-        #     nn.Linear(256, 64),
-        #     nn.GELU(),
-        #     nn.LayerNorm(64),
-        #     nn.Dropout(0.2),
-        #     nn.Linear(64, 1),  # logit
-        # )
+
         self.head = nn.Linear(in_dim, 1)  # 简单线性分类头
 
     def forward(self, x):

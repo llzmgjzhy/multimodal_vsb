@@ -146,6 +146,18 @@ class Options(object):
             help="learning rate (default holds for batch size 64)",
         )
         self.parser.add_argument(
+            "--backbone_lr",
+            type=float,
+            default=1e-5,
+            help="learning rate (default holds for batch size 64)",
+        )
+        self.parser.add_argument(
+            "--head_lr",
+            type=float,
+            default=1e-5,
+            help="learning rate (default holds for batch size 64)",
+        )
+        self.parser.add_argument(
             "--weight_decay",
             type=float,
             default=0.0,
