@@ -87,9 +87,9 @@ def main(config):
         loss_module = get_loss_module(config)
 
         # initialize the scheduler
-        scheduler = lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=config.epochs, eta_min=1e-8
-        )
+        # scheduler = lr_scheduler.CosineAnnealingLR(
+        #     optimizer, T_max=config.epochs, eta_min=1e-8
+        # )
 
         # initialize runner, responsible for training, validation and testing
         runner_class = pipeline_factory(config)
@@ -193,7 +193,7 @@ def main(config):
                     logger.info("Early stopping")
                     break
 
-            scheduler.step()
+            # scheduler.step()
             print("lr = {:.10f}".format(optimizer.param_groups[0]["lr"]))
 
         # test
