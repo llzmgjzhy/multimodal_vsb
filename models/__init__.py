@@ -7,12 +7,18 @@ from .gru.gru_model import PulseGRUModel
 from .mlp_cnn.mlp_cnn import PulseConvModel
 from .transformer.transformer_model import PulseTransformerModel
 from .cnn_mlp.cnn_mlp import PulseEncoder
-from .prototype.prototype import ProtoModelB3,ProtoEnrichMLP
+from .prototype.prototype import ProtoModelB3, ProtoEnrichMLP
 from .unsupervised_learning.prototype.prototype_stats import DL_SOTA_PrototypeNet
 from .patchtst.patchtst import Model as PatchTST_Model
-from .unsupervised_learning.transformer.transformer import SetEncoderTransformer, DownStreamClassifier
-from .unsupervised_learning.swav.swav import SwAVModel,ClassifySwAVModel
-from .swintransformer.swintransformer import DualImageSwinClassifier
+from .unsupervised_learning.transformer.transformer import (
+    SetEncoderTransformer,
+    DownStreamClassifier,
+)
+from .unsupervised_learning.swav.swav import SwAVModel, ClassifySwAVModel
+from .swintransformer.swintransformer import (
+    DualImageSwinClassifier,
+    NumericalMatrixSwinClassifier,
+)
 
 model_factory = {
     "one_fits_all": gpt4ts,
@@ -32,5 +38,6 @@ model_factory = {
     "swav": SwAVModel,
     "classifier_swav": ClassifySwAVModel,
     "swin_transformer": DualImageSwinClassifier,
+    "num_swin_transformer": NumericalMatrixSwinClassifier,
     # Add other models here as needed
 }

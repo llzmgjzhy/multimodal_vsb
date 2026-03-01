@@ -76,3 +76,32 @@ class DualImageSwinClassifier(nn.Module):
         # 6) classifier: [B]
         logit = self.head(z).squeeze(-1)
         return logit
+
+
+class NumericalMatrixSwinClassifier(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.model_name = config.model_pretrain
+        # e.g., "microsoft/swin-tiny-patch4-window7-224"
+        self.pretrained = True
+        self.freeze_backbone = False
+        self.encoder = SwinFeatureExtractor(self.model_name, pretrained=self.pretrained)
+        self.k_num = 3  # 每个bag的实例数，训练时固定，推理时可变
+
+        if self.freeze_backbone:
+            for p in self.encoder.parameters():
+                p.requires_grad = False
+
+        in_dim = self.encoder.hidden  # heat + overlay concat
+
+        self.head = nn.Linear(in_dim, 1)  # 简单线性分类头
+
+    def forward(self, x):
+        # x is numerical matrices: [B, 3, 160, 30]
+        B, C, H, W = x.shape
+        x = F.interpolate(x, size=(224, 224), mode="bilinear", align_corners=False)
+
+        feat = self.encoder(x)  # Swin
+
+        logit = self.head(feat).squeeze(-1)
+        return logit

@@ -1,5 +1,11 @@
 from torch.utils.data import DataLoader, WeightedRandomSampler
-from dataset.dataset import VSBTrainDataset, VSBImageDataset, VSBImageCollator
+from dataset.dataset import (
+    VSBTrainDataset,
+    VSBImageDataset,
+    VSBImageCollator,
+    VSBMatrixDataset,
+    VSBNumericalMatrixCollator,
+)
 from transformers import AutoImageProcessor
 import os
 
@@ -20,7 +26,7 @@ def _create_loader(dataset_class, indices, signals_ids, labels, config, is_train
         collate_fn=(
             VSBImageCollator(image_processor)
             if dataset_class == VSBImageDataset
-            else None
+            else VSBNumericalMatrixCollator()
         ),
     )
 
@@ -29,7 +35,7 @@ def dataloader_provider(config, train_idx, val_idx, test_idx, signals_ids, label
     dataset_class = (
         VSBImageDataset
         if config.data_path != os.path.join(config.root_path, "VSBdata")
-        else VSBTrainDataset
+        else VSBMatrixDataset
     )
     train_loader = _create_loader(dataset_class, train_idx, signals_ids, labels, config)
     val_loader = _create_loader(

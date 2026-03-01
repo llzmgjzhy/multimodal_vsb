@@ -152,3 +152,95 @@ class VSBImageCollator:
         x_heat = x_heat.view(B, K, *x_heat.shape[1:])
         x_over = x_over.view(B, K, *x_over.shape[1:])
         return (x_heat, x_over), labels, sample_ids
+
+
+# numerical matrix dataset, for ablation or direct input to MLP
+class VSBMatrixDataset(Dataset):
+    def __init__(
+        self,
+        signal_ids,
+        labels,
+        data_path,
+        phase_level,
+        norm_mode="global_robust",
+        q1=-8.123006,
+        q99=8.137256,
+        z_clip=5.0,
+    ):
+        self.signal_ids = signal_ids
+        self.labels = labels
+        self.signal_path = os.path.join(data_path, "all_chunk_waves_160chunks.dat")
+        self.phase_level = phase_level
+        with open(self.signal_path, "rb") as f:
+            self.data = pickle.load(f)
+            # cause the data is small enough, we load all data into memory
+        # Ensure data arrays are float32 to save memory and avoid conversions later
+        self.data = np.asarray(self.data, dtype=np.float32)
+
+        self.norm_mode = norm_mode
+        self.q1 = q1
+        self.q99 = q99
+        self.z_clip = z_clip
+
+        self.data_path = data_path
+        self.phase_level = phase_level
+
+    def __getitem__(self, index):
+        # check img path exists
+        # if not os.path.exists(self.img_path):
+        #     print(f"Warning: Path {self.img_path} does not exist.")
+        #     return None
+        # signal = np.load(
+        #     os.path.join(self.img_path, f"signals_{self.signal_ids[index]}.npy")
+        # ).astype(np.float32)
+        # signal = np.transpose(signal, (1, 0))  # [800000, 3]
+        sample_id = self.signal_ids[index]
+        if self.phase_level:
+            signal = self.data[
+                self.signal_ids[index]
+            ]  # signal shape is [160, 30], astype float32
+        else:
+            start_idx = index * 3
+            end_idx = start_idx + 3
+            if end_idx > len(self.data):
+                raise IndexError(
+                    f"Index {index} out of range: start_idx={start_idx} exceeds data length {len(self.data)}"
+                )
+
+            signal = self.data[start_idx:end_idx]  # 形状：[3, 160, 30]
+        label = self.labels[index]
+        label = torch.tensor(label, dtype=torch.float32)
+
+        # default signal is [3, 160, 30]
+        x = signal.copy()
+        if self.norm_mode == "global_robust":
+            x = np.clip(x, self.q1, self.q99)
+            x = (x - self.q1) / (self.q99 - self.q1 + 1e-6)
+
+        elif self.norm_mode == "meas_zscore":
+            m = x.mean()
+            s = x.std() + 1e-6
+            x = (x - m) / s
+            x = np.clip(x, -self.z_clip, self.z_clip)
+            x = (x + self.z_clip) / (2 * self.z_clip)  # → [0,1]
+
+        else:
+            raise ValueError("Unknown norm_mode")
+
+        x = torch.from_numpy(x)  # 转成 torch.Tensor
+
+        return (x, label, sample_id)
+
+    def __len__(self):
+        return len(self.signal_ids)
+
+
+class VSBNumericalMatrixCollator:
+    def __init__(self):
+        pass
+
+    def __call__(self, batch):
+        xs = torch.stack([b[0] for b in batch], dim=0)  # [B,3,160,30]
+        ys = torch.stack([b[1] for b in batch], dim=0)
+        sids = torch.tensor([b[2] for b in batch], dtype=torch.long)
+        return xs, ys, sids

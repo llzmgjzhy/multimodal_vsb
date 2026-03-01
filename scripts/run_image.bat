@@ -13,7 +13,7 @@ call D:\Programming\python\conda\Scripts\activate.bat pd
 REM =========================
 REM 参数设置
 REM =========================
-set model=swin_transformer
+set model=num_swin_transformer
 set model_pretrain=microsoft/swin-tiny-patch4-window7-224
 set batch_size=16
 set epochs=10
@@ -29,7 +29,7 @@ python run_main.py ^
     --comment "%task% using %model%" ^
     --name "%task%_vsb" ^
     --root_path ./dataset ^
-    --data_path VSBdata/vsb_images ^
+    --data_path VSBdata ^
     --output_dir ./tensorboard ^
     --records_file vsb_%task%.xlsx ^
     --model_name %model% ^
@@ -40,8 +40,8 @@ python run_main.py ^
     --seed 2025 ^
     --batch_size %batch_size% ^
     --lr %lr% ^
-    --backbone_lr 5e-6 ^
-    --head_lr 5e-5 ^
+    --backbone_lr 1e-5 ^
+    --head_lr 1e-5 ^
     --itr %itr% ^
     --d_model 128 ^
     --dropout 0.1 ^
